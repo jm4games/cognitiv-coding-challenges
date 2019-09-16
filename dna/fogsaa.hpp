@@ -12,6 +12,6 @@ class Fogsaa {
 public:
     explicit Fogsaa(T& helix);
 
-    AlignmentReport alignWith(T& helix);
+    alignment_result align_with(T& helix);
 };
 }

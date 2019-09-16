@@ -14,17 +14,48 @@ concept bool ChromesomeSimliar = requires(T a, T b) {
 
 template<typename T>
 concept bool IsPerson = requires(T a) {
-    a.chromosomes() == 24;
+    a.chromosomes() == 23;
 };
 
-class analyzer {
+template<HelixStream T>
+class AlignmentForker {
+public:
+    virtual std::future<alignment_result> spawn_alignment(T& a, T& b) = 0;
+};
+
+template <HelixStream T>
+class pairwise_aligner {
+    AlignmentForker<T>& forker_;
 
 public:
-    analyzer() {};
+    explicit pairwise_aligner(AlignmentForker<T>& forker) : forker_(forker) {};
 
+    // TODO: Use future build in error?
+    // TODO: use constraints to enforce person chromo count and that both people have same count.
     template <typename P> requires (Person<P> && IsPerson<P>)
-         //std::future<std::array<AlignmentReport, 23>> analyze_people_async(P& p1, P& p2);
-         int analyze_people_async(P& p1, P& p2) { return 0; }
+    std::future<std::vector<alignment_result>> analyze_people_async(P& p1, P& p2){
+        std::vector<std::future<alignment_result>> futures;
+        futures.reserve(p1.chromosomes());
+
+        for (std::size_t i = 0; i < p1.chromosomes(); ++i) {
+            auto my_future = forker_.spawn_alignment(p1.chromosome(i), p2.chromosome(i));
+            futures.push_back(std::move(my_future));
+        }
+
+        auto wait_for_all = [my_futures = std::move(futures)] {
+            std::vector<std::future<alignment_result>> futures2 = std::move(my_futures);
+            std::vector<alignment_result> results;
+            results.reserve(futures2.size());
+
+            for (size_t i = 0; i < futures2.size(); ++i) {
+                results[i] = futures2[i].get();
+            }
+
+            return results;
+        };
+
+        return std::async(std::launch::async, wait_for_all);
+    }
 };
 
 } // dna

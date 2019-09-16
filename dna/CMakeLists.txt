@@ -10,7 +10,6 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fconcepts")
    #)
 
 add_library(cogdna INTERFACE)
-#add_library(cogdna SRC_FILES)
 target_include_directories(cogdna
         INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
 
