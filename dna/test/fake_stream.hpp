@@ -37,6 +37,7 @@ public:
 	fake_stream(const fake_stream& other);
 	fake_stream(fake_stream&& other) noexcept;
 	fake_stream(std::vector<std::byte> data, std::size_t chunksize);
+	fake_stream(const std::string& data, std::size_t chunksize);
 
 	fake_stream& operator=(const fake_stream& other);
 	fake_stream& operator=(fake_stream&& other) noexcept;

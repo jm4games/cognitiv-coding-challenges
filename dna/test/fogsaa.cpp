@@ -37,7 +37,7 @@ enum pairing_type : char
     None,
     Match,
     MisMatch,
-    Gap
+    Gap,
 };
 
 static constexpr int64_t pairing_score(pairing_type type)
@@ -55,10 +55,12 @@ static constexpr int64_t pairing_score(pairing_type type)
     }
 }
 
-struct alignment
+struct final_pairing
 {
-    int64_t ft_max = numeric_limits<int64_t>::min();
-    pairing_type pairing = Match;
+    byte s1 = static_cast<byte>(0);
+    byte s2 = static_cast<byte>(0);
+
+    final_pairing(byte b1, byte b2) : s1(b1), s2(b2) {}
 };
 
 struct fitness_score
@@ -70,7 +72,7 @@ struct fitness_score
 struct pairing
 {
     fitness_score ft;
-    int64_t s1_offset = -1;
+    int64_t s1offset = -1;
     int64_t s2_offset = -1;
     pairing_type type = None;
 
@@ -92,7 +94,6 @@ struct pairing
 
 struct pairing_choice
 {
-    bool match = false;
     pairing non_gap;
     pairing gap_s1;
     pairing gap_s2;
@@ -119,73 +120,51 @@ struct hash_pairing_key
 static pairing_choice eval_pairing_choices(
         const vector<byte>& s1, const vector<byte>& s2, int64_t score, int64_t p1, int64_t p2)
 {
-    int64_t s1_sz = s1.size(), s2_sz = s2.size();
+    int64_t s1sz = s1.size(), s2_sz = s2.size();
     pairing_choice result;
 
     // compare
     int64_t p1n = p1 + 1, p2n = p2 + 1;
-    result.match = s1[p1n] == s2[p2n];
+    result.non_gap.type = s1[p1n] == s2[p2n] ? Match : MisMatch;
 
-    int64_t x1 = s2_sz - p2n, x2 = s1_sz - p1n;
-    int64_t score_nxt = score + (result.match ? MatchScore : MisMatchScore);
-    result.non_gap.s1_offset = p1n;
+    int64_t x1 = s2_sz - p2n, x2 = s1sz - p1n;
+    int64_t score_nxt = score + (result.non_gap.type == Match ? MatchScore : MisMatchScore);
+    result.non_gap.s1offset = p1n;
     result.non_gap.s2_offset = p2n;
     result.non_gap.ft = fitness_score{score_nxt + fs_min(x1, x2),  score_nxt + fs_max(x1, x2)};
 
     score_nxt = score + GapPenalty;
 
     // gap s1
-    x1 = s2_sz - p2n, x2 = s1_sz - min(p1, (int64_t)0);
-    result.gap_s1.s1_offset = p1;
-    result.gap_s1.s2_offset = p2n;
-    result.gap_s1.ft = fitness_score{score_nxt + fs_min(x1, x2), score_nxt + fs_max(x1, x2)};
+    //x1 = s2_sz - p2n, x2 = s1sz - min(p1, (int64_t)0);
+    //result.gap_s1.s1offset = p1;
+    //result.gap_s1.s2_offset = p2n;
+    //result.gap_s1.ft = fitness_score{score_nxt + fs_min(x1, x2), score_nxt + fs_max(x1, x2)};
+    //result.gap_s1.type = GapS1;
 
     // gap s2
-    x1 = s2_sz - min(p2, (int64_t)0), x2 = s1_sz - p1n;
-    result.gap_s2.s1_offset = p1n;
+    x1 = s2_sz - min(p2, (int64_t)0), x2 = s1sz - p1n;
+    result.gap_s2.s1offset = p1n;
     result.gap_s2.s2_offset = p2;
     result.gap_s2.ft = fitness_score{score_nxt + fs_min(x1, x2), score_nxt + fs_max(x1, x2)};
+    result.gap_s1.type = Gap;
 
     return result;
 }
 
-template<HelixStream T>
-static constexpr void fill_helix_vector(T& helix, vector<byte> &vec)
+alignment_result fogsaa::align_bytes(const vector<byte>& s1, const vector<byte>& s2) const
 {
-    vec.reserve(helix.size());
-    while (true) {
-        auto buf = helix.read();
-        if (buf.size() == 0) {
-            return;
-        }
-
-        auto end = buf.end();
-        for (auto it = buf.begin(); it != end; ++it) {
-            vec.emplace_back(*it);
-        }
-    }
-}
-
-template<HelixStream T>
-fogsaa<T>::fogsaa(T& helix)
-{
-    fill_helix_vector(helix, s1_);
-}
-
-template<HelixStream T>
-alignment_result fogsaa<T>::align_with(T& helix)
-{
-    vector<byte> s2;
-    fill_helix_vector(helix, s2);
-
-    vector<alignment> bestAlignment(max(s1_.size(), s2.size()), alignment{});
-    vector<alignment> curAlignment(max(s1_.size(), s2.size()), alignment{});
+    vector<final_pairing> best_pairings;
+    vector<final_pairing> cur_pairings;
     unordered_map<pairing_key, int64_t, hash_pairing_key> knownPairings;
     priority_queue<pairing, vector<pairing>, pairing> priQueue;
-    int64_t score = 0, best_score = 0, p1 = -1, p2 = -1;
+    int64_t score = 0, best_score = 0, base_offset = 0, p1 = -1, p2 = -1;
     pairing cur_pairing;
 
-    pairing_choice choice = eval_pairing_choices(s1_, s2, score, p1, p2);
+    best_pairings.reserve(max(s1.size(), s2.size()));
+    cur_pairings.reserve(max(s1.size(), s2.size()));
+
+    pairing_choice choice = eval_pairing_choices(s1, s2, score, p1, p2);
     priQueue.push(choice.non_gap);
     priQueue.push(choice.gap_s1);
     priQueue.push(choice.gap_s2);
@@ -195,38 +174,63 @@ alignment_result fogsaa<T>::align_with(T& helix)
     while (!priQueue.empty())
     {
         if (!cur_pairing.is_set()) {
-            cur_pairing = priQueue.pop();
+            cur_pairing = priQueue.top();
+            priQueue.pop();
 
             if (cur_pairing.ft.max <= best_score) {
                 cur_pairing = pairing{}; // reset so we can pop
                 continue;
             }
+
+            cur_pairings.clear();
+            base_offset = cur_pairing.s1offset;
         }
 
         score += pairing_score(cur_pairing.type);
-        if (cur_pairing.s1_offset + 1 == s1_.size() || cur_pairing.s2_offset + 1 == s2.size()) // leaf detection
+        if (cur_pairing.s1offset + 1 == s1.size() || cur_pairing.s2_offset + 1 == s2.size())
         {
-            // TODO: assign gap score to remainder of s1/s2.
-            // TODO: update best pairing if cur pairing better
+            best_score = cur_pairing.ft.max;
+            for (auto it = cur_pairings.begin(); it != cur_pairings.end(); ++it)
+            {
+                best_pairings[base_offset] = *it;
+                ++base_offset;
+            }
+
+            // Add gaps where needed
+            if (cur_pairing.s1offset + 1 != s1.size())
+            {
+                for (auto i = cur_pairing.s1offset; i < s1.size(); ++i, ++base_offset)
+                {
+                    //best_pairings[best_offset] = final_pairing{i, cur_pairing.s2_offset, cur_pairing.type};
+                }
+            } else
+            {
+                for (auto i = cur_pairing.s2_offset; i < s2.size(); ++i, ++base_offset){
+                    //best_pairings[best_offset] = final_pairing{cur_pairing.s1offset, i, Gap};
+                }
+            }
+
+            cur_pairing = pairing{}; // reset so we can pop
             continue;
         }
 
         // TODO: commit current pairing once we have child pairing that is better then existing
         // TODO: compare current best pairing with existing best pairing, if its worse we need to back
         // track
-        pairing_choice choice = eval_pairing_choices(s1_, s2, score, p1, p2);
+        choice = eval_pairing_choices(s1, s2, score, p1, p2);
         if (choice.non_gap.ft.max > choice.gap_s1.ft.max && choice.non_gap.ft.max > choice.gap_s2.ft.max)
         {
-            auto existing = knownPairings.find(
-                    pairing_key{choice.non_gap.s1_offset, choice.non_gap.s2_offset});
+            pairing_key key{choice.non_gap.s1offset, choice.non_gap.s2_offset};
+            auto existing = knownPairings.find(key);
             if (existing != knownPairings.end()) {
                 if (choice.non_gap.ft.max <= existing->second) {
-                    // TODO: backtrack
+                    cur_pairing = pairing{}; // reset so we can pop
                     continue;
                 }
             }
 
-            curAlignment.emplace_back(choice.non_gap.ft.max, Match);
+            knownPairings[key] = choice.non_gap.ft.max;
+            //cur_pairings.emplace_back(choice.non_gap.s1offset, choice.non_gap.s2_offsettype);
             cur_pairing = choice.non_gap;
 
             priQueue.push(choice.gap_s1);
@@ -240,7 +244,44 @@ alignment_result fogsaa<T>::align_with(T& helix)
         }
     }
 
-    return alignment_result{};
+    int64_t s1offset = 0;
+    int64_t s2_offset = 0;
+    int64_t s1mut_start = -1;
+    int64_t s2_mut_start = -1;
+    vector<mutation> muts;
+
+    for (int64_t i=0; i < best_pairings.size(); ++i)
+    {
+        auto p = best_pairings[i];
+
+        if (p.s1 == p.s2)
+        {
+            if (s1mut_start != -1)
+            {
+                location h1{s1mut_start, s1offset - s1mut_start};
+                location h2{s2_mut_start, s2_offset - s2_mut_start};
+
+                muts.emplace_back(h1, h2);
+                s1mut_start = -1;
+            }
+
+            s1offset++;
+            s2_offset++;
+        } else if (s1mut_start != -1)
+        {
+            s1mut_start = s1offset;
+            s2_mut_start = s2_offset;
+        } else {
+            s1offset++;
+
+            if (p.s2 != static_cast<byte>(0)) // mismatch detection
+            {
+                s2_offset++;
+            }
+        }
+    }
+
+    return alignment_result{std::move(muts), 0, ""};
 }
 
 } // dna

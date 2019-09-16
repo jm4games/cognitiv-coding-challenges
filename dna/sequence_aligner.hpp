@@ -19,6 +19,8 @@ struct mutation
 {
     location helix1;
     location helix2;
+
+    mutation(location h1, location h2): helix1(h1), helix2(h2) {}
 };
 
 // Describes how similar two helixes are and where they differ (mutations).

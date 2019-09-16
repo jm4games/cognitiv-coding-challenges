@@ -7,6 +7,7 @@ set(TESTS
         fake_person_factory.cpp
         people_tests.cpp
         fogsaa.cpp
+        fogsaa_test.cpp
 )
 
 add_executable(dna_test ${TESTS} main.cpp)

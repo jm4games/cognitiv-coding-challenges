@@ -24,6 +24,17 @@ fake_stream::fake_stream(std::vector<std::byte> data, std::size_t chunksize) :
 		offset_(0)
 { }
 
+fake_stream::fake_stream(const std::string& data, std::size_t chunksize) :
+		chunksize_(chunksize),
+		offset_(0)
+{
+    data_.reserve((data.size() / 4) + 1);
+    for (auto it = data.begin(); it != data.end(); ++it)
+    {
+        data_.push_back(static_cast<std::byte>(*it));
+    }
+}
+
 fake_stream& fake_stream::operator=(const fake_stream& other)
 {
 	chunksize_ = other.chunksize_;
