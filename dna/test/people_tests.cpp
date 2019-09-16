@@ -29,8 +29,8 @@ SCENARIO("Testing dna between people") {
             fake_person alice = std::move(fake_person_factory::new_person_with_dup_chromos());
 
             // TODO: construct fogsaa instance
-            threaded_alignment_forker<fake_stream> forker;
-            pairwise_aligner<fake_stream> aligner(forker);
+            //threaded_alignment_forker<fake_stream> forker;
+            //pairwise_aligner<fake_stream> aligner(forker);
             //auto res = my_analyzer.analyze_people_async(bob, alice);
         }
     }

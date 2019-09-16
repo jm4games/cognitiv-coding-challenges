@@ -6,6 +6,7 @@ set(TESTS
 		sequence_buffer_test.cpp
         fake_person_factory.cpp
         people_tests.cpp
+        fogsaa.cpp
 )
 
 add_executable(dna_test ${TESTS} main.cpp)

@@ -7,10 +7,11 @@ namespace dna
 {
 
 template<HelixStream T>
-class Fogsaa {
+class fogsaa {
+    // TODO: explain why s1_ is here (caching!!)
     const std::vector<std::byte> s1_;
 public:
-    explicit Fogsaa(T& helix);
+    explicit fogsaa(T& helix);
 
     alignment_result align_with(T& helix);
 };

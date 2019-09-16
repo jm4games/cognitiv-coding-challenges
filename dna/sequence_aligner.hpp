@@ -10,8 +10,8 @@ namespace dna {
 // Defines the location of a subsequence in a helix.
 struct location
 {
-    int64_t offset;
-    int64_t size;
+    int64_t offset = 0;
+    int64_t size = 0;
 };
 
 // Defines the location where two strands are conflicting.
