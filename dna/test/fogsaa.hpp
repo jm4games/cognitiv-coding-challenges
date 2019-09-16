@@ -19,7 +19,7 @@ class fogsaa {
 
             auto end = buf.end();
             for (auto it = buf.begin(); it != end; ++it) {
-                vec.emplace_back(*it);
+                vec.emplace_back(static_cast<std::byte>(*it));
             }
         }
     }

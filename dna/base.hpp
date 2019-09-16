@@ -35,6 +35,23 @@ constexpr char to_char(base value)
 	}
 }
 
+constexpr base from_char(char a)
+{
+    switch(a)
+    {
+        case 'A':
+            return base::adenine;
+        case 'T':
+            return base::thymine;
+        case 'C':
+            return base::cytosine;
+        case 'G':
+            return base::guanine;
+        default:
+            throw std::bad_cast();
+    }
+}
+
 constexpr std::byte complement_packed(std::byte packed)
 {
 	return packed ^ static_cast<std::byte>(0);
