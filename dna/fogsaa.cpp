@@ -35,7 +35,7 @@ static constexpr void fillHelixVector(T& helix, vector<byte> &vec) {
     while (true) {
         auto buf = helix.read();
         if (buf.size() == 0) {
-            break;
+            return;
         }
 
         auto end = buf.end();
@@ -54,8 +54,49 @@ Fogsaa<T>::Fogsaa(T& helix)
 template<HelixStream T>
 AlignmentReport Fogsaa<T>::alignWith(T& helix)
 {
+    int64_t p1 = 0, p2 = 0;
     vector<byte> s2;
+    vector<byte> bestAlignment;
+    vector<byte> curAlignment;
+    //queue<..> priQueue; ordered by fitMax
     fillHelixVector(helix, s2);
+
+    int64_t curScore = 0;
+
+    //while (true) // has nodes
+    //{
+    //    int64_t x1 = s2.size() - p2, x2 = s1.size() - p1;
+    //    int64_t fitMin = curScore + fsMin(x1, x2);
+    //    int64_t fitMax = curScore + fsMax(x1, x2);
+
+    //    // compare
+    //    int p1n = p1 + 1, p2n = p2 + 1;
+    //    if (s1[p1n] == s2[p2n]) {
+    //        int64_t scoreNxt = curScore + MatchScore;
+    //        int64_t x1 = s2.size() - p2n, x2 = s1.size() - p1n;
+    //        int64_t fitMinN = scoreNxt + fsMin(x1, x2);
+    //        int64_t fitMaxN = scoreNxt + fsMax(x1, x2);
+    //    } else {
+    //        int64_t scoreNxt = curScore + MisMatchScore;
+    //        int64_t x1 = s2.size() - p2n, x2 = s1.size() - p1n;
+    //        int64_t fitMinN = scoreNxt + fsMin(x1, x2);
+    //        int64_t fitMaxN = scoreNxt + fsMax(x1, x2);
+    //    }
+
+    //    // gap s1
+    //    int64_t scoreNxt = curScore + GapPenalty;
+    //    int64_t x1 = s2.size() - p2n, x2 = s1.size() - p1;
+    //    int64_t fitMinN = scoreNxt + fsMin(x1, x2);
+    //    int64_t fitMaxN = scoreNxt + fsMax(x1, x2);
+
+    //    // gap s2
+    //    int64_t scoreNxt = curScore + GapPenalty;
+    //    int64_t x1 = s2.size() - p2, x2 = s1.size() - p1n;
+    //    int64_t fitMinN = scoreNxt + fsMin(x1, x2);
+    //    int64_t fitMaxN = scoreNxt + fsMax(x1, x2);
+
+        // now pick one of comp, gap s1, or gap s2
+    //}
 
     // TODO:
     return AlignmentReport{};

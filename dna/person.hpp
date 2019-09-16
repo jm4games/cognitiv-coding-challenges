@@ -12,11 +12,11 @@ concept bool HelixStream = requires(T a) {
 	{ a.size() } -> std::size_t;
 };
 
-template<HelixStream T>
+template<typename T>
 concept bool Person = requires(T a) {
 	{ a.chromosome(1) } -> HelixStream
 	{ a.chromosomes() } -> std::size_t
 };
 
-}
+} // dna
 

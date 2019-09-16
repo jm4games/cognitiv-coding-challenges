@@ -1,17 +1,14 @@
 #pragma once
 
 #include "person.hpp"
-#include <vector>
+#include "sequence_aligner.hpp"
 
 namespace dna
 {
 
-struct AlignmentReport {
-};
-
 template<HelixStream T>
 class Fogsaa {
-    const std::vector<std::byte> s1;
+    const std::vector<std::byte> s1_;
 public:
     explicit Fogsaa(T& helix);
 
