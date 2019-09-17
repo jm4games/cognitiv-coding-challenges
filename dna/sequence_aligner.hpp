@@ -11,7 +11,7 @@ namespace dna {
 struct location
 {
     int64_t offset = 0;
-    int64_t size = 0;
+    int64_t length = 0;
 };
 
 // Defines the location where two strands are conflicting.
@@ -29,7 +29,7 @@ struct mutation
 struct alignment_result
 {
     std::vector<mutation> mutations;
-    double simularityScore = 0;
+    double simularity_score = 0;
     std::string error;
 };
 

@@ -29,20 +29,27 @@ fake_stream::fake_stream(const std::string& data, std::size_t chunksize) :
 		offset_(0)
 {
     data_.reserve((data.size() / 4) + 1);
-    int baseCnt = 0;
+    int base_cnt = 0;
     std::byte bases = static_cast<std::byte>(0);
     for (auto it = data.begin(); it != data.end(); ++it)
     {
-        if (baseCnt == 4)
+        if (base_cnt == 4)
         {
             data_.push_back(bases);
-            baseCnt = 0;
+            base_cnt = 0;
             bases = static_cast<std::byte>(0);
         } else
         {
             bases = bases >> 2;
             bases |= static_cast<std::byte>(dna::from_char(*it)) << 6;
         }
+
+        ++base_cnt;
+    }
+
+    if (base_cnt > 0)
+    {
+        data_.push_back(bases);
     }
 }
 

@@ -248,6 +248,7 @@ alignment_result fogsaa::align_bytes(const vector<byte>& s1, const vector<byte>&
     int64_t s2_offset = 0;
     int64_t s1mut_start = -1;
     int64_t s2_mut_start = -1;
+    double total_muts = 0;
     vector<mutation> muts;
 
     for (int64_t i=0; i < best_pairings.size(); ++i)
@@ -263,6 +264,7 @@ alignment_result fogsaa::align_bytes(const vector<byte>& s1, const vector<byte>&
 
                 muts.emplace_back(h1, h2);
                 s1mut_start = -1;
+                total_muts += h1.length;
             }
 
             s1offset++;
@@ -281,7 +283,7 @@ alignment_result fogsaa::align_bytes(const vector<byte>& s1, const vector<byte>&
         }
     }
 
-    return alignment_result{std::move(muts), 0, ""};
+    return alignment_result{std::move(muts), total_muts / best_pairings.size(), ""};
 }
 
 } // dna

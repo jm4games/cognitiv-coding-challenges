@@ -31,10 +31,24 @@ public:
     template<HelixStream T>
     alignment_result align(T& stream1, T& stream2) const
     {
+        if (stream1.size() == 0 && stream2.size() == 0)
+        {
+            alignment_result res;
+            res.simularity_score = 1;
+            return res;
+        }
+
+        if (stream1.size() == 0 || stream2.size() == 0)
+        {
+            alignment_result res;
+            res.error = "A stream did not have data";
+            return res;
+        }
+
         std::vector<std::byte> s1;
         std::vector<std::byte> s2;
 
-        // TODO: set longest stream to s1
+        // TODO: set longest stream to s1, then flip back as needed
         fill_helix_vector(stream1, s1);
         fill_helix_vector(stream2, s2);
 

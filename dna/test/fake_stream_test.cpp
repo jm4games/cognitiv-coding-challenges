@@ -66,10 +66,10 @@ TEST_CASE("Fake stream is suitable for testing", "[stream]")
 	REQUIRE(endseq[7] == dna::C);
 }
 
-TEST_CASE("Fake person fulfills Person concept", "[stream]")
-{
-	fake_person person = std::move(fake_person_factory::new_person_with_dup_chromos());
-	person_tester<fake_person> tester(std::cout, person);
-	tester.dump_chromosomes();
-}
+//TEST_CASE("Fake person fulfills Person concept", "[stream]")
+//{
+	//fake_person person = std::move(fake_person_factory::new_person_with_dup_chromos());
+	//person_tester<fake_person> tester(std::cout, person);
+	//tester.dump_chromosomes();
+//}
 
