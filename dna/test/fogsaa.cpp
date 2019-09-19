@@ -263,6 +263,7 @@ public:
         int64_t score = 0;
         int64_t best_score = numeric_limits<int64_t>::min();
         pairing_cache known_pairings;
+        unordered_map<pairing_key, int64_t, hash_pairing_key> best_scores;
         pairing cur_pairing;
 
         while (!priQueue_.empty())
@@ -274,6 +275,7 @@ public:
                 break; // we are done, top of queue max can't beat best score
             }
 
+            // TODO: how do i reset score?
             int64_t base_offset = 0;
             while (true)
             {
@@ -287,6 +289,17 @@ public:
                     break;
                 }
 
+                pairing_key key{cur_pairing.s1_offset, cur_pairing.s2_offset};
+                auto existing = best_scores.find(key);
+                if (existing != best_scores.end()) {
+                    if (score <= existing->second) {
+                        break; // better path exist
+                    }
+                }
+
+                best_scores[key] = score;
+                // TODO: Set cur pairings....
+
                 pairing_choice choice = eval_pairing_choices(
                         score, cur_pairing.s1_offset, cur_pairing.s2_offset);
                 pairing other;
@@ -299,10 +312,15 @@ public:
                     cur_pairing = choice.gap_s2;
                     other = choice.non_gap;
                 }
+                // add cur score to pairing
+                // we can double add to queue for a position if tmax is better (just check on pop if
+                // value has been evaluated alrdy)
+
+                // TODO: I might just needed a visted check on entry to query (independent of tmax)....
 
                 if (  cur_pairing.ft.max <= best_score
                    || !try_insert_pairing(known_pairings, cur_pairing)) {
-                    break; // TODO: how do i recover state here?
+                    break; // TODO: how do i recover state (score/node) here?
                 }
 
                 if (try_insert_pairing(known_pairings, other)) {
