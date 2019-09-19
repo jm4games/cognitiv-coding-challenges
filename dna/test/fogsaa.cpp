@@ -75,6 +75,7 @@ struct pairing
     fitness_score ft;
     int64_t s1_offset = -1;
     int64_t s2_offset = -1;
+    int64_t score = numeric_limits<int64_t>::min();
     pairing_type type = None;
 
     bool operator() (const pairing& lhs, const pairing& rhs) const
@@ -127,10 +128,6 @@ class byte_aligner
     vector<final_pairing> best_pairings_;
     vector<final_pairing> cur_pairings_;
 
-
-    // TODO: replace queue vector with ordered map?
-    priority_queue<pairing, vector<pairing>, pairing> priQueue_;
-
     pairing_choice eval_pairing_choices(int64_t score, int64_t p1, int64_t p2)
     {
         int64_t s1sz = s1_.size(), s2_sz = s2_.size();
@@ -142,6 +139,7 @@ class byte_aligner
 
         int64_t x1 = s2_sz - p2n, x2 = s1sz - p1n;
         int64_t score_nxt = score + (result.non_gap.type == Match ? MatchScore : MisMatchScore);
+        result.non_gap.score = score_nxt;
         result.non_gap.s1_offset = p1n;
         result.non_gap.s2_offset = p2n;
         result.non_gap.ft = fitness_score{score_nxt + fs_min(x1, x2),  score_nxt + fs_max(x1, x2)};
@@ -157,6 +155,7 @@ class byte_aligner
 
         // gap s2
         x1 = s2_sz - min(p2, (int64_t)0), x2 = s1sz - p1n;
+         result.gap_s2.score = score_nxt;
         result.gap_s2.s1_offset = p1n;
         result.gap_s2.s2_offset = p2;
         result.gap_s2.ft = fitness_score{score_nxt + fs_min(x1, x2), score_nxt + fs_max(x1, x2)};
@@ -186,6 +185,12 @@ class byte_aligner
                 best_pairings_[base_offset] = final_pairing{gapByte, s2_[cur_pairing.s2_offset]};
             }
         }
+    }
+
+    bool is_expanded(pairing_cache& cache, const pairing& cur_pairing)
+    {
+        pairing_key key{cur_pairing.s1_offset, cur_pairing.s2_offset};
+        return cache.find(key) != cache.end();
     }
 
     bool try_insert_pairing(pairing_cache& cache, const pairing& cur_pairing)
@@ -252,56 +257,61 @@ public:
     {
         best_pairings_.reserve(max(s1.size(), s2.size()));
         cur_pairings_.reserve(max(s1.size(), s2.size()));
-
-        pairing_choice choice = eval_pairing_choices(0, -1, -1);
-        priQueue_.push(choice.non_gap);
-        //priQueue_.push(choice.gap_s1);
-        priQueue_.push(choice.gap_s2);
     }
 
     alignment_result run_alignment() {
-        int64_t score = 0;
         int64_t best_score = numeric_limits<int64_t>::min();
-        pairing_cache known_pairings;
+        //pairing_cache known_pairings;
         unordered_map<pairing_key, int64_t, hash_pairing_key> best_scores;
+        // TODO: replace queue vector with ordered map?
+        priority_queue<pairing, vector<pairing>, pairing> pri_queue;
         pairing cur_pairing;
 
-        while (!priQueue_.empty())
+        pairing_choice choice = eval_pairing_choices(0, -1, -1);
+        pri_queue.push(choice.non_gap);
+        //pri_queue.push(choice.gap_s1);
+        pri_queue.push(choice.gap_s2);
+
+        while (!pri_queue.empty())
         {
-            cur_pairing = priQueue_.top();
-            priQueue_.pop();
+            cur_pairing = pri_queue.top();
+            pri_queue.pop();
 
             if (cur_pairing.ft.max <= best_score) {
                 break; // we are done, top of queue max can't beat best score
             }
 
-            // TODO: how do i reset score?
-            int64_t base_offset = 0;
+            //int64_t score = cur_pairing.score;
+            int64_t base_offset = cur_pairing.s1_offset;
             while (true)
             {
-                score += pairing_score(cur_pairing.type);
-
+                //score += pairing_score(cur_pairing.type);
                 // end of strand?
                 if (cur_pairing.s1_offset + 1 == s1_.size() || cur_pairing.s2_offset + 1 == s2_.size())
                 {
-                    best_score = score;
+                    best_score = cur_pairing.score;
                     save_current_path(cur_pairing, base_offset);
                     break;
                 }
 
                 pairing_key key{cur_pairing.s1_offset, cur_pairing.s2_offset};
                 auto existing = best_scores.find(key);
-                if (existing != best_scores.end()) {
-                    if (score <= existing->second) {
-                        break; // better path exist
-                    }
+                if (existing != best_scores.end() && cur_pairing.score <= existing->second)
+                {
+                     break; // better path exist
                 }
 
-                best_scores[key] = score;
-                // TODO: Set cur pairings....
+                best_scores[key] = cur_pairing.score;
+                if (cur_pairing.type != Gap)
+                {
+                  cur_pairings_[cur_pairing.s1_offset] = final_pairing{s1_[cur_pairing.s1_offset], s2_[cur_pairing.s2_offset]};
+                } else
+                {
+                  cur_pairings_[cur_pairing.s1_offset] = final_pairing{s1_[cur_pairing.s1_offset], gapByte};
+                }
 
-                pairing_choice choice = eval_pairing_choices(
-                        score, cur_pairing.s1_offset, cur_pairing.s2_offset);
+                choice = eval_pairing_choices(
+                        cur_pairing.score, cur_pairing.s1_offset, cur_pairing.s2_offset);
                 pairing other;
 
                 if (choice.non_gap.ft.max >= choice.gap_s2.ft.max) {
@@ -312,19 +322,15 @@ public:
                     cur_pairing = choice.gap_s2;
                     other = choice.non_gap;
                 }
-                // add cur score to pairing
-                // we can double add to queue for a position if tmax is better (just check on pop if
-                // value has been evaluated alrdy)
 
-                // TODO: I might just needed a visted check on entry to query (independent of tmax)....
+                key = pairing_key{cur_pairing.s1_offset, cur_pairing.s2_offset};
+                existing = best_scores.find(key);
 
-                if (  cur_pairing.ft.max <= best_score
-                   || !try_insert_pairing(known_pairings, cur_pairing)) {
-                    break; // TODO: how do i recover state (score/node) here?
-                }
-
-                if (try_insert_pairing(known_pairings, other)) {
-                    priQueue_.push(other);
+                if (  other.ft.max > best_score && (existing == best_scores.end()
+                   || existing->second < other.score))
+                {
+                    // TODO: do i really want to push other all the time?
+                    pri_queue.push(other);
                 }
             }
         }
