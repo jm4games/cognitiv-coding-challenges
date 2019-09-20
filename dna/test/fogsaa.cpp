@@ -243,7 +243,6 @@ class byte_aligner
             location h2{s2_mut_start, s2_offset - s2_mut_start};
 
             muts.emplace_back(h1, h2);
-            s1_mut_start = -1;
             total_muts += h1.length;
         }
 

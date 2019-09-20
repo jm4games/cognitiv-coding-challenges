@@ -41,7 +41,7 @@ TEST_CASE("Fake stream is suitable for testing", "[stream]")
 	auto data = data::fake();
 	fake_stream stream(std::move(data), 128);
 
-	REQUIRE(stream.size() == 1020);
+	REQUIRE(stream.size() == 4080);
 	for (int i = 0; i < 7; i++)
 	{
 		auto seq = stream.read();
@@ -68,8 +68,8 @@ TEST_CASE("Fake stream is suitable for testing", "[stream]")
 
 //TEST_CASE("Fake person fulfills Person concept", "[stream]")
 //{
-	//fake_person person = std::move(fake_person_factory::new_person_with_dup_chromos());
-	//person_tester<fake_person> tester(std::cout, person);
-	//tester.dump_chromosomes();
+  //fake_person person = std::move(fake_person_factory::new_person_with_dup_chromos());
+  //person_tester<fake_person> tester(std::cout, person);
+  //tester.dump_chromosomes();
 //}
 
