@@ -41,12 +41,12 @@ constexpr base from_char(char a)
     {
         case 'A':
             return base::adenine;
-        case 'T':
-            return base::thymine;
         case 'C':
             return base::cytosine;
         case 'G':
             return base::guanine;
+        case 'T':
+            return base::thymine;
         default:
             throw std::bad_cast();
     }

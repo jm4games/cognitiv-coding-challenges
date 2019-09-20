@@ -40,8 +40,8 @@ fake_stream::fake_stream(const std::string& data, std::size_t chunksize) :
             bases = static_cast<std::byte>(0);
         } else
         {
-            bases = bases >> 2;
-            bases |= static_cast<std::byte>(dna::from_char(*it)) << 6;
+            bases = bases << 2;
+            bases |= static_cast<std::byte>(dna::from_char(*it));
         }
 
         ++base_cnt;

@@ -1,8 +1,9 @@
 #include "fogsaa.hpp"
+#include <algorithm>
 #include <limits>
 #include <cstdint>
+#include <memory>
 #include <queue>
-#include <algorithm>
 
 using namespace std;
 
@@ -12,7 +13,7 @@ namespace dna
 static const int64_t MatchScore = 1;
 static const int64_t MisMatchScore = -1;
 static const int64_t GapPenalty = -2;
-static const byte gapByte = static_cast<byte>(0);
+static const byte gapByte = static_cast<byte>(8);
 
 static constexpr int64_t future_score_base(int64_t score, int64_t x1, int64_t x2)
 {
@@ -60,6 +61,8 @@ struct final_pairing
 {
     byte s1 = gapByte;
     byte s2 = gapByte;
+
+    final_pairing() {};
 
     final_pairing(byte b1, byte b2) : s1(b1), s2(b2) {}
 };
@@ -125,8 +128,8 @@ class byte_aligner
     const vector<byte>& s1_;
     const vector<byte>& s2_;
 
-    vector<final_pairing> best_pairings_;
-    vector<final_pairing> cur_pairings_;
+    unique_ptr<final_pairing[]> best_pairings_;
+    unique_ptr<final_pairing[]> cur_pairings_;
 
     pairing_choice eval_pairing_choices(int64_t score, int64_t p1, int64_t p2)
     {
@@ -164,26 +167,15 @@ class byte_aligner
         return result;
     }
 
-    void save_current_path(const pairing& cur_pairing, int64_t base_offset)
+    void save_current_path(int64_t base_offset)
     {
-        for (auto it = cur_pairings_.begin(); it != cur_pairings_.end(); ++it)
+        for (int64_t i = base_offset; i < s2_.size(); ++i)
         {
-            best_pairings_[base_offset] = *it;
-            ++base_offset;
+            best_pairings_[i] = cur_pairings_[i];
         }
 
-        // Add gaps where needed
-        if (cur_pairing.s1_offset + 1 != s1_.size())
-        {
-            for (auto i = cur_pairing.s1_offset; i < s1_.size(); ++i, ++base_offset)
-            {
-                best_pairings_[base_offset] = final_pairing{s1_[cur_pairing.s1_offset], gapByte};
-            }
-        } else
-        {
-            for (auto i = cur_pairing.s2_offset; i < s2_.size(); ++i, ++base_offset){
-                best_pairings_[base_offset] = final_pairing{gapByte, s2_[cur_pairing.s2_offset]};
-            }
+        for (auto i = s2_.size(); i < s1_.size(); ++i){
+            best_pairings_[i] = final_pairing{s1_[i], gapByte};
         }
     }
 
@@ -211,52 +203,60 @@ class byte_aligner
     {
         int64_t s1_offset = 0;
         int64_t s2_offset = 0;
-        int64_t s1mut_start = -1;
+        int64_t s1_mut_start = -1;
         int64_t s2_mut_start = -1;
         double total_muts = 0;
         vector<mutation> muts;
 
-        for (int64_t i=0; i < best_pairings_.size(); ++i)
+        for (int64_t i=0; i < s1_.size(); ++i)
         {
             auto p = best_pairings_[i];
 
             if (p.s1 == p.s2)
             {
-                if (s1mut_start != -1)
+                if (s1_mut_start != -1) // mutation ended, save it
                 {
-                    location h1{s1mut_start, s1_offset - s1mut_start};
+                    location h1{s1_mut_start, s1_offset - s1_mut_start};
                     location h2{s2_mut_start, s2_offset - s2_mut_start};
 
                     muts.emplace_back(h1, h2);
-                    s1mut_start = -1;
+                    s1_mut_start = -1;
                     total_muts += h1.length;
                 }
-
-                s1_offset++;
-                s2_offset++;
-            } else if (s1mut_start != -1)
+            } else if (s1_mut_start == -1) // try to start mutation
             {
-                s1mut_start = s1_offset;
+                s1_mut_start = s1_offset;
                 s2_mut_start = s2_offset;
-            } else {
-                s1_offset++;
+            }
 
-                if (p.s2 != gapByte) // mismatch detection
-                {
-                    s2_offset++;
-                }
+            s1_offset++;
+
+            if (p.s2 != gapByte)
+            {
+                s2_offset++;
             }
         }
 
-        return alignment_result{std::move(muts), total_muts / best_pairings_.size(), ""};
+        if (s1_mut_start != -1) // mutation ended, save it
+        {
+            location h1{s1_mut_start, s1_offset - s1_mut_start};
+            location h2{s2_mut_start, s2_offset - s2_mut_start};
+
+            muts.emplace_back(h1, h2);
+            s1_mut_start = -1;
+            total_muts += h1.length;
+        }
+
+        return alignment_result{std::move(muts), 1 - (total_muts / s1_.size()), ""};
     }
 
 public:
     byte_aligner(const vector<byte>& s1, const vector<byte>& s2)
-        : s1_(s1), s2_(s2)
+        : s1_(s1), s2_(s2), best_pairings_()
     {
-        best_pairings_.reserve(max(s1.size(), s2.size()));
-        cur_pairings_.reserve(max(s1.size(), s2.size()));
+        size_t size = max(s1.size(), s2.size());
+        best_pairings_ = move(make_unique<final_pairing[]>(size));
+        cur_pairings_ = move(make_unique<final_pairing[]>(size));
     }
 
     alignment_result run_alignment() {
@@ -285,15 +285,6 @@ public:
             int64_t base_offset = cur_pairing.s1_offset;
             while (true)
             {
-                //score += pairing_score(cur_pairing.type);
-                // end of strand?
-                if (cur_pairing.s1_offset + 1 == s1_.size() || cur_pairing.s2_offset + 1 == s2_.size())
-                {
-                    best_score = cur_pairing.score;
-                    save_current_path(cur_pairing, base_offset);
-                    break;
-                }
-
                 pairing_key key{cur_pairing.s1_offset, cur_pairing.s2_offset};
                 auto existing = best_scores.find(key);
                 if (existing != best_scores.end() && cur_pairing.score <= existing->second)
@@ -308,6 +299,13 @@ public:
                 } else
                 {
                   cur_pairings_[cur_pairing.s1_offset] = final_pairing{s1_[cur_pairing.s1_offset], gapByte};
+                }
+
+                if (cur_pairing.s2_offset + 1 == s2_.size()) // end of strand? remember s2 will always be shortest
+                {
+                    best_score = cur_pairing.score;
+                    save_current_path(base_offset);
+                    break;
                 }
 
                 choice = eval_pairing_choices(
