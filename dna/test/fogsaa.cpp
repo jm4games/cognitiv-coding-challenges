@@ -133,33 +133,33 @@ class byte_aligner
 
     pairing_choice eval_pairing_choices(int64_t score, int64_t p1, int64_t p2)
     {
-        int64_t s1sz = s1_.size(), s2_sz = s2_.size();
+        int64_t s1_sz = s1_.size(), s2_sz = s2_.size();
         pairing_choice result;
 
         // compare
         int64_t p1n = p1 + 1, p2n = p2 + 1;
-        result.non_gap.type = s1_[p1n] == s2_[p2n] ? Match : MisMatch;
+        result.non_gap.type = s1_[p1] == s2_[p2] ? Match : MisMatch;
 
-        int64_t x1 = s2_sz - p2n, x2 = s1sz - p1n;
+        int64_t x1 = s2_sz - p2n, x2 = s1_sz - p1n;
         int64_t score_nxt = score + (result.non_gap.type == Match ? MatchScore : MisMatchScore);
         result.non_gap.score = score_nxt;
-        result.non_gap.s1_offset = p1n;
-        result.non_gap.s2_offset = p2n;
+        result.non_gap.s1_offset = p1;
+        result.non_gap.s2_offset = p2;
         result.non_gap.ft = fitness_score{score_nxt + fs_min(x1, x2),  score_nxt + fs_max(x1, x2)};
 
         score_nxt = score + GapPenalty;
 
         // gap s1
-        //x1 = s2_sz - p2n, x2 = s1sz - min(p1, (int64_t)0);
+        //x1 = s2_sz - p2n, x2 = s1_sz - min(p1, (int64_t)0);
         //result.gap_s1.s1_offset = p1;
         //result.gap_s1.s2_offset = p2n;
         //result.gap_s1.ft = fitness_score{score_nxt + fs_min(x1, x2), score_nxt + fs_max(x1, x2)};
         //result.gap_s1.type = GapS1;
 
         // gap s2
-        x1 = s2_sz - min(p2, (int64_t)0), x2 = s1sz - p1n;
+        x1 = s2_sz - p2, x2 = s1_sz - p1n;
          result.gap_s2.score = score_nxt;
-        result.gap_s2.s1_offset = p1n;
+        result.gap_s2.s1_offset = p1;
         result.gap_s2.s2_offset = p2;
         result.gap_s2.ft = fitness_score{score_nxt + fs_min(x1, x2), score_nxt + fs_max(x1, x2)};
         result.gap_s2.type = Gap;
@@ -266,7 +266,7 @@ public:
         priority_queue<pairing, vector<pairing>, pairing> pri_queue;
         pairing cur_pairing;
 
-        pairing_choice choice = eval_pairing_choices(0, -1, -1);
+        pairing_choice choice = eval_pairing_choices(0, 0, 0);
         pri_queue.push(choice.non_gap);
         //pri_queue.push(choice.gap_s1);
         pri_queue.push(choice.gap_s2);
@@ -280,7 +280,6 @@ public:
                 break; // we are done, top of queue max can't beat best score
             }
 
-            //int64_t score = cur_pairing.score;
             int64_t base_offset = cur_pairing.s1_offset;
             while (true)
             {
@@ -308,7 +307,7 @@ public:
                 }
 
                 choice = eval_pairing_choices(
-                        cur_pairing.score, cur_pairing.s1_offset, cur_pairing.s2_offset);
+                        cur_pairing.score, cur_pairing.s1_offset + 1, cur_pairing.s2_offset + (cur_pairing.type == Gap ? 0 : 1));
                 pairing other;
 
                 if (choice.non_gap.ft.max >= choice.gap_s2.ft.max) {
