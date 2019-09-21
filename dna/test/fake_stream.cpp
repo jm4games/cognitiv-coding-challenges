@@ -39,7 +39,7 @@ fake_stream::fake_stream(const std::string& data, std::size_t chunksize) :
     std::byte bases = static_cast<std::byte>(0);
     for (auto it = data.begin(); it != data.end(); ++it)
     {
-        if (base_cnt == 4)
+        if (base_cnt == dna::packed_size::value)
         {
             data_.push_back(bases);
             base_cnt = 0;
@@ -54,7 +54,8 @@ fake_stream::fake_stream(const std::string& data, std::size_t chunksize) :
     }
 
     if (base_cnt > 0)
-    {
+    {   if (base_cnt != dna::packed_size::value)
+            bases = bases << ((dna::packed_size::value - base_cnt) * 2);
         data_.push_back(bases);
     }
 }

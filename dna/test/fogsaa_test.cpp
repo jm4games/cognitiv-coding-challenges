@@ -123,29 +123,62 @@ void print_mutations(std::vector<mutation>& muts)
     //REQUIRE(res.simularity_score == 0.50);
 //}
 
-TEST_CASE("Given two similar stands with one gap and 1 mismatch, 2 mutation should exist")
+//TEST_CASE("Given two similar stands with one gap, 2 mutation should exist")
+//{
+    //fake_stream s1("ACGG", 512);
+    //fake_stream s2("AGG", 512);
+    //fogsaa aligner;
+
+    //alignment_result res = aligner.align(s1, s2);
+    //print_mutations(res.mutations);
+    //REQUIRE(res.mutations.size() == 1);
+    //REQUIRE(res.simularity_score == 0.75);
+//}
+
+//TEST_CASE("Given two similar stands with one gap and 1 mismatch (at start), 1 mutation should exist")
+//{
+    //fake_stream s1("ACGG", 512);
+    //fake_stream s2("TGG", 512);
+    //fogsaa aligner;
+
+    //alignment_result res = aligner.align(s1, s2);
+    //print_mutations(res.mutations);
+    //REQUIRE(res.mutations.size() == 1);
+    //REQUIRE(res.simularity_score == 0.50);
+//}
+
+//TEST_CASE("Given two similar stands with one gap and 1 mismatch (at end), 1 mutation should exist")
+//{
+    //fake_stream s1("ACGG", 512);
+    //fake_stream s2("ACT", 512);
+    //fogsaa aligner;
+
+    //alignment_result res = aligner.align(s1, s2);
+    //print_mutations(res.mutations);
+    //REQUIRE(res.mutations.size() == 1);
+    //REQUIRE(res.simularity_score == 0.50);
+//}
+
+//TEST_CASE("Given two similar stands with one gap and 1 mismatch (at end), 1 mutation should exist")
+//{
+    //fake_stream s1("ACGT", 512);
+    //fake_stream s2("ACT", 512);
+    //fogsaa aligner;
+
+    //alignment_result res = aligner.align(s1, s2);
+    //print_mutations(res.mutations);
+    //REQUIRE(res.mutations.size() == 1);
+    //REQUIRE(res.simularity_score == 0.50);
+//}
+
+TEST_CASE("Given two ....")
 {
-    fake_stream s1("ACGG", 512);
-    fake_stream s2("AGG", 512);
+    fake_stream s1("ACGGTTGC", 512);
+    fake_stream s2("AGCGTC", 512);
     fogsaa aligner;
 
     alignment_result res = aligner.align(s1, s2);
     print_mutations(res.mutations);
-    REQUIRE(res.mutations.size() == 1);
-    REQUIRE(res.simularity_score == 0.75);
+    REQUIRE(res.mutations.size() == 3);
+    REQUIRE(res.simularity_score == 5.0/8.0);
 }
-
-//TEST_CASE("Given two ....")
-//{
-    //fake_stream s1("ACGGTTGC ", 512);
-    //fake_stream s2("AGCGTC", 512);
-    //fogsaa aligner;
-
-    //alignment_result res = aligner.align(s1, s2);
-    //for (int i = 0; i < res.mutations.size(); ++i) {
-        //printf("H1 | Offset: %u, len: %u\n", res.mutations[i].helix1.offset, res.mutations[i].helix1.length);
-        //printf("H2 | Offset: %u, len: %u\n\n", res.mutations[i].helix2.offset, res.mutations[i].helix2.length);
-    //}
-    //REQUIRE(res.mutations.size() == 3);
-    //REQUIRE(res.simularity_score == 5.0/8.0);
-//}

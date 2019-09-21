@@ -131,7 +131,7 @@ class byte_aligner
     unique_ptr<final_pairing[]> best_pairings_;
     unique_ptr<final_pairing[]> cur_pairings_;
 
-    pairing_choice eval_pairing_choices(int64_t score, int64_t p1, int64_t p2)
+    pairing_choice eval_pairing_choices(const int64_t score, const  int64_t p1, const int64_t p2) const
     {
         int64_t s1_sz = s1_.size(), s2_sz = s2_.size();
         pairing_choice result;
@@ -167,36 +167,10 @@ class byte_aligner
         return result;
     }
 
-    void save_current_path(int64_t base_offset)
-    {
-        for (int64_t i = base_offset; i < s2_.size(); ++i)
-        {
-            best_pairings_[i] = cur_pairings_[i];
-        }
-
-        for (auto i = s2_.size(); i < s1_.size(); ++i){
-            best_pairings_[i] = final_pairing{s1_[i], gapByte};
-        }
-    }
-
-    bool is_expanded(pairing_cache& cache, const pairing& cur_pairing)
+    bool is_expanded(pairing_cache& cache, const pairing& cur_pairing) const
     {
         pairing_key key{cur_pairing.s1_offset, cur_pairing.s2_offset};
         return cache.find(key) != cache.end();
-    }
-
-    bool try_insert_pairing(pairing_cache& cache, const pairing& cur_pairing)
-    {
-        pairing_key key{cur_pairing.s1_offset, cur_pairing.s2_offset};
-        auto existing = cache.find(key);
-        if (existing != cache.end()) {
-            if (cur_pairing.ft.max <= existing->second) {
-                return false;
-            }
-        }
-
-        cache[key] = cur_pairing.ft.max;
-        return true;
     }
 
     alignment_result get_alignment()
@@ -260,7 +234,6 @@ public:
 
     alignment_result run_alignment() {
         int64_t best_score = numeric_limits<int64_t>::min();
-        //pairing_cache known_pairings;
         unordered_map<pairing_key, int64_t, hash_pairing_key> best_scores;
         // TODO: replace queue vector with ordered map?
         priority_queue<pairing, vector<pairing>, pairing> pri_queue;
@@ -276,9 +249,8 @@ public:
             cur_pairing = pri_queue.top();
             pri_queue.pop();
 
-            if (cur_pairing.ft.max <= best_score) {
+            if (cur_pairing.ft.max <= best_score)
                 break; // we are done, top of queue max can't beat best score
-            }
 
             int64_t base_offset = cur_pairing.s1_offset;
             while (true)
@@ -286,31 +258,36 @@ public:
                 pairing_key key{cur_pairing.s1_offset, cur_pairing.s2_offset};
                 auto existing = best_scores.find(key);
                 if (existing != best_scores.end() && cur_pairing.score <= existing->second)
-                {
                      break; // better path exist
-                }
 
                 best_scores[key] = cur_pairing.score;
                 if (cur_pairing.type != Gap)
                 {
-                  cur_pairings_[cur_pairing.s1_offset] = final_pairing{s1_[cur_pairing.s1_offset], s2_[cur_pairing.s2_offset]};
+                  cur_pairings_[cur_pairing.s1_offset] =
+                      final_pairing{s1_[cur_pairing.s1_offset], s2_[cur_pairing.s2_offset]};
                 } else
                 {
-                  cur_pairings_[cur_pairing.s1_offset] = final_pairing{s1_[cur_pairing.s1_offset], gapByte};
+                  cur_pairings_[cur_pairing.s1_offset] =
+                      final_pairing{s1_[cur_pairing.s1_offset], gapByte};
                 }
 
-                if (cur_pairing.s2_offset + 1 == s2_.size()) // end of strand? remember s2 will always be shortest
+                // end of strand? remember s2 will always be shortest
+                if (cur_pairing.s2_offset + 1 == s2_.size() && cur_pairing.type != Gap)
                 {
                     best_score = cur_pairing.score;
-                    save_current_path(base_offset);
+                    for (int64_t i = base_offset; i < s1_.size(); ++i)
+                        best_pairings_[i] = cur_pairings_[i];
                     break;
                 }
 
                 choice = eval_pairing_choices(
-                        cur_pairing.score, cur_pairing.s1_offset + 1, cur_pairing.s2_offset + (cur_pairing.type == Gap ? 0 : 1));
+                        cur_pairing.score,
+                        cur_pairing.s1_offset + 1,
+                        cur_pairing.s2_offset + (cur_pairing.type == Gap ? 0 : 1));
                 pairing other;
 
-                if (choice.non_gap.ft.max >= choice.gap_s2.ft.max) {
+                if (choice.non_gap.ft.max >= choice.gap_s2.ft.max)
+                {
                     cur_pairing = choice.non_gap;
                     other = choice.gap_s2;
                 } else
@@ -322,6 +299,7 @@ public:
                 key = pairing_key{cur_pairing.s1_offset, cur_pairing.s2_offset};
                 existing = best_scores.find(key);
 
+                // TODO: don't enqueue if max is less then best known min
                 if (  other.ft.max > best_score && (existing == best_scores.end()
                    || existing->second < other.score))
                 {
