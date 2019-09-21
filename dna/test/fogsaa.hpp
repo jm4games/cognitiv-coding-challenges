@@ -10,7 +10,10 @@ class fogsaa {
     template<HelixStream T>
     static constexpr void fill_helix_vector(T& helix, std::vector<std::byte> &vec)
     {
-        vec.reserve(helix.size());
+        vec.reserve(helix.size() + BASE_S_OFFSET);
+        for (size_t i = 0; i < BASE_S_OFFSET; ++i)
+            vec.emplace_back(static_cast<std::byte>(0));
+
         while (true) {
             auto buf = helix.read();
             if (buf.size() == 0) {
@@ -28,6 +31,8 @@ class fogsaa {
     alignment_result align_bytes(
             const std::vector<std::byte>& s1, const std::vector<std::byte>& s2) const;
 public:
+    static const size_t BASE_S_OFFSET;
+
     template<HelixStream T>
     alignment_result align(T& stream1, T& stream2) const
     {

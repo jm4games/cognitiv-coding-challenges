@@ -10,6 +10,8 @@ using namespace std;
 namespace dna
 {
 
+const size_t fogsaa::BASE_S_OFFSET = 1;
+
 static const int64_t MatchScore = 1;
 static const int64_t MisMatchScore = -1;
 static const int64_t GapPenalty = -2;
@@ -138,13 +140,13 @@ class byte_aligner
 
         // compare
         int64_t p1n = p1 + 1, p2n = p2 + 1;
-        result.non_gap.type = s1_[p1] == s2_[p2] ? Match : MisMatch;
+        result.non_gap.type = s1_[p1n] == s2_[p2n] ? Match : MisMatch;
 
         int64_t x1 = s2_sz - p2n, x2 = s1_sz - p1n;
         int64_t score_nxt = score + (result.non_gap.type == Match ? MatchScore : MisMatchScore);
         result.non_gap.score = score_nxt;
-        result.non_gap.s1_offset = p1;
-        result.non_gap.s2_offset = p2;
+        result.non_gap.s1_offset = p1n;
+        result.non_gap.s2_offset = p2n;
         result.non_gap.ft = fitness_score{score_nxt + fs_min(x1, x2),  score_nxt + fs_max(x1, x2)};
 
         score_nxt = score + GapPenalty;
@@ -159,7 +161,7 @@ class byte_aligner
         // gap s2
         x1 = s2_sz - p2, x2 = s1_sz - p1n;
          result.gap_s2.score = score_nxt;
-        result.gap_s2.s1_offset = p1;
+        result.gap_s2.s1_offset = p1n;
         result.gap_s2.s2_offset = p2;
         result.gap_s2.ft = fitness_score{score_nxt + fs_min(x1, x2), score_nxt + fs_max(x1, x2)};
         result.gap_s2.type = Gap;
@@ -175,14 +177,15 @@ class byte_aligner
 
     alignment_result get_alignment()
     {
-        int64_t s1_offset = 0;
-        int64_t s2_offset = 0;
+        const int64_t s_offset = static_cast<int64_t>(fogsaa::BASE_S_OFFSET);
+        int64_t s1_offset = s_offset;
+        int64_t s2_offset = s_offset;
         int64_t s1_mut_start = -1;
         int64_t s2_mut_start = -1;
         double total_muts = 0;
         vector<mutation> muts;
 
-        for (int64_t i=0; i < s1_.size(); ++i)
+        for (int64_t i= fogsaa::BASE_S_OFFSET; i < s1_.size(); ++i)
         {
             auto p = best_pairings_[i];
 
@@ -190,8 +193,8 @@ class byte_aligner
             {
                 if (s1_mut_start != -1) // mutation ended, save it
                 {
-                    location h1{s1_mut_start, s1_offset - s1_mut_start};
-                    location h2{s2_mut_start, s2_offset - s2_mut_start};
+                    location h1{s1_mut_start - s_offset, s1_offset - s1_mut_start};
+                    location h2{s2_mut_start - s_offset, s2_offset - s2_mut_start};
 
                     muts.emplace_back(h1, h2);
                     s1_mut_start = -1;
@@ -213,21 +216,25 @@ class byte_aligner
 
         if (s1_mut_start != -1) // mutation ended, save it
         {
-            location h1{s1_mut_start, s1_offset - s1_mut_start};
-            location h2{s2_mut_start, s2_offset - s2_mut_start};
+            location h1{s1_mut_start - s_offset, s1_offset - s1_mut_start};
+            location h2{s2_mut_start - s_offset, s2_offset - s2_mut_start};
 
             muts.emplace_back(h1, h2);
             total_muts += h1.length;
         }
 
-        return alignment_result{std::move(muts), 1 - (total_muts / s1_.size()), ""};
+        return alignment_result{
+            std::move(muts),
+            1 - (total_muts / (s1_.size() - fogsaa::BASE_S_OFFSET)),
+            ""
+        };
     }
 
 public:
     byte_aligner(const vector<byte>& s1, const vector<byte>& s2)
         : s1_(s1), s2_(s2), best_pairings_()
     {
-        size_t size = max(s1.size(), s2.size());
+        size_t size = max(s1.size(), s2.size()) + fogsaa::BASE_S_OFFSET;
         best_pairings_ = move(make_unique<final_pairing[]>(size));
         cur_pairings_ = move(make_unique<final_pairing[]>(size));
     }
@@ -282,8 +289,8 @@ public:
 
                 choice = eval_pairing_choices(
                         cur_pairing.score,
-                        cur_pairing.s1_offset + 1,
-                        cur_pairing.s2_offset + (cur_pairing.type == Gap ? 0 : 1));
+                        cur_pairing.s1_offset,
+                        cur_pairing.s2_offset);
                 pairing other;
 
                 if (choice.non_gap.ft.max >= choice.gap_s2.ft.max)
