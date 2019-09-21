@@ -14,26 +14,26 @@ void print_mutations(std::vector<mutation>& muts)
 
 // TODO: Validate mutations
 
-//TEST_CASE("Given empty sequences no mutations should exist")
-//{
-    //fake_stream s1("", 512);
-    //fake_stream s2("", 512);
-    //fogsaa aligner;
+TEST_CASE("Given empty sequences no mutations should exist")
+{
+    fake_stream s1("", 512);
+    fake_stream s2("", 512);
+    fogsaa aligner;
 
-    //alignment_result res = aligner.align(s1, s2);
-    //REQUIRE(res.mutations.size() == 0);
-    //REQUIRE(res.simularity_score == 1);
-//}
+    alignment_result res = aligner.align(s1, s2);
+    REQUIRE(res.mutations.size() == 0);
+    REQUIRE(res.simularity_score == 1);
+}
 
-//TEST_CASE("Given an empty sequence paired with non empty, an error should occur")
-//{
-    //fake_stream s1("AA", 512);
-    //fake_stream s2("", 512);
-    //fogsaa aligner;
+TEST_CASE("Given an empty sequence paired with non empty, an error should occur")
+{
+    fake_stream s1("AA", 512);
+    fake_stream s2("", 512);
+    fogsaa aligner;
 
-    //alignment_result res = aligner.align(s1, s2);
-    //REQUIRE(res.error.size() > 0);
-//}
+    alignment_result res = aligner.align(s1, s2);
+    REQUIRE(res.error.size() > 0);
+}
 
 TEST_CASE("Given two stands with single same base, no mutations should exist")
 {
@@ -159,26 +159,14 @@ TEST_CASE("Given two similar stands with one gap and 1 mismatch (at end), 1 muta
     REQUIRE(res.simularity_score == 0.50);
 }
 
-//TEST_CASE("Given two similar stands with one gap and 1 mismatch (at end), 1 mutation should exist")
-//{
-    //fake_stream s1("ACGT", 512);
-    //fake_stream s2("ACT", 512);
-    //fogsaa aligner;
+TEST_CASE("Given two ....")
+{
+    fake_stream s1("ACGGTTGC", 512);
+    fake_stream s2("AGCGTC", 512);
+    fogsaa aligner;
 
-    //alignment_result res = aligner.align(s1, s2);
-    //print_mutations(res.mutations);
-    //REQUIRE(res.mutations.size() == 1);
-    //REQUIRE(res.simularity_score == 0.50);
-//}
-
-//TEST_CASE("Given two ....")
-//{
-    //fake_stream s1("ACGGTTGC", 512);
-    //fake_stream s2("AGCGTC", 512);
-    //fogsaa aligner;
-
-    //alignment_result res = aligner.align(s1, s2);
-    //print_mutations(res.mutations);
-    //REQUIRE(res.mutations.size() == 3);
-    //REQUIRE(res.simularity_score == 5.0/8.0);
-//}
+    alignment_result res = aligner.align(s1, s2);
+    print_mutations(res.mutations);
+    REQUIRE(res.mutations.size() == 3);
+    REQUIRE(res.simularity_score == 0.5);
+}

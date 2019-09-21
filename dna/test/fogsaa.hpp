@@ -6,6 +6,8 @@
 namespace dna
 {
 
+// FOGSAA based on the following whitepaper https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3638164/#s1
+
 class fogsaa {
     template<HelixStream T>
     static constexpr void fill_helix_vector(T& helix, std::vector<std::byte> &vec)
