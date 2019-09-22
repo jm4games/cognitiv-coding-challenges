@@ -41,7 +41,8 @@ enum pairing_type : char
     None,
     Match,
     MisMatch,
-    Gap,
+    GapS1,
+    GapS2,
 };
 
 static constexpr int64_t pairing_score(pairing_type type)
@@ -52,7 +53,8 @@ static constexpr int64_t pairing_score(pairing_type type)
             return MatchScore;
         case MisMatch:
             return MisMatchScore;
-        case Gap:
+        case GapS1:
+        case GapS2:
             return GapPenalty;
         default:
             return 0;
@@ -156,10 +158,11 @@ class byte_aligner
 
         // gap s1
         x1 = s2_sz - p2n, x2 = s1_sz - p1;
+        result.gap_s1.score = score_nxt;
         result.gap_s1.s1_offset = p1;
         result.gap_s1.s2_offset = p2n;
         result.gap_s1.ft = fitness_score{score_nxt + fs_min(x1, x2), score_nxt + fs_max(x1, x2)};
-        result.gap_s1.type = Gap;
+        result.gap_s1.type = GapS1;
         result.gap_s1.pairing_offset = cur_offset + 1;
 
         // gap s2
@@ -168,7 +171,7 @@ class byte_aligner
         result.gap_s2.s1_offset = p1n;
         result.gap_s2.s2_offset = p2;
         result.gap_s2.ft = fitness_score{score_nxt + fs_min(x1, x2), score_nxt + fs_max(x1, x2)};
-        result.gap_s2.type = Gap;
+        result.gap_s2.type = GapS2;
         result.gap_s2.pairing_offset = cur_offset + 1;
 
         return result;
@@ -278,22 +281,28 @@ public:
 
                 pairing_key key {cur_pairing.s1_offset, cur_pairing.s2_offset};
                 best_fit_scores[key] = cur_pairing.ft.max;
-                if (cur_pairing.type != Gap)
+                switch (cur_pairing.type)
                 {
-                  cur_pairings_[cur_pairing.pairing_offset] =
-                      final_pairing{s1_[cur_pairing.s1_offset], s2_[cur_pairing.s2_offset]};
-                } else
-                {
-                  cur_pairings_[cur_pairing.pairing_offset] =
-                      final_pairing{s1_[cur_pairing.s1_offset], gapByte};
+                    case Match:
+                    case MisMatch:
+                      cur_pairings_[cur_pairing.pairing_offset] =
+                          final_pairing{s1_[cur_pairing.s1_offset], s2_[cur_pairing.s2_offset]};
+                    break;
+                    case GapS2:
+                      cur_pairings_[cur_pairing.pairing_offset] =
+                          final_pairing{s1_[cur_pairing.s1_offset], gapByte};
+                    break;
+                    default:
+                      cur_pairings_[cur_pairing.pairing_offset] =
+                          final_pairing{gapByte, s2_[cur_pairing.s2_offset]};
+                    break;
                 }
 
-                if (cur_pairing.s2_offset + 1 == s2_.size() || cur_pairing.s1_offset +1 == s2_.size())
+                if (cur_pairing.s1_offset + 1 == s1_.size() || cur_pairing.s2_offset +1 == s2_.size())
                 {
                     best_score = cur_pairing.score;
                     best_min = max(cur_pairing.ft.min, best_min);
 
-                    //best_min = cur_pairing.ft.min > best_min ? cur_pairing.ft.min : best_min;
                     for (int64_t i = base_offset; i < cur_len; ++i)
                         best_pairings_[i] = cur_pairings_[i];
 
