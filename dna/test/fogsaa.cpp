@@ -130,6 +130,7 @@ struct hash_pairing_key
 class byte_aligner
 {
     using score_cache = unordered_map<pairing_key, int64_t, hash_pairing_key>;
+    using queue = priority_queue<pairing, vector<pairing>, pairing>;
     const vector<byte>& s1_;
     const vector<byte>& s2_;
 
@@ -177,7 +178,7 @@ class byte_aligner
         return result;
     }
 
-    alignment_result get_alignment()
+    alignment_result get_alignment() const
     {
         const int64_t s_offset = static_cast<int64_t>(BASE_S_OFFSET);
         int64_t s1_offset = s_offset;
@@ -232,7 +233,7 @@ class byte_aligner
         };
     }
 
-    bool is_candidate(const score_cache& cache, const pairing& pairing, int64_t best_score)
+    static bool is_candidate(const score_cache& cache, const pairing& pairing, int64_t best_score)
     {
         if (pairing.ft.max < best_score)
             return false;
@@ -240,6 +241,24 @@ class byte_aligner
         pairing_key key = pairing_key{pairing.s1_offset, pairing.s2_offset};
         auto existing = cache.find(key);
         return existing == cache.end() || existing->second < pairing.ft.max;
+    }
+
+    static void process_candidates(
+            bool has_candidate, pairing& cur_pairing, pairing& other,queue& pri, int64_t best_min)
+    {
+        if (!has_candidate)
+        {
+            cur_pairing = other;
+        }
+        else if (cur_pairing.ft.max < other.ft.max)
+        {
+            pri.push(cur_pairing);
+            cur_pairing = other;
+        } else if (!(  other.ft.max < cur_pairing.ft.min
+                    || other.ft.max < best_min))
+        {
+            pri.push(other);
+        }
     }
 
 public:
@@ -256,7 +275,7 @@ public:
         int64_t best_min = numeric_limits<int64_t>::min();
         unordered_map<pairing_key, int64_t, hash_pairing_key> best_fit_scores;
         // TODO: replace queue vector with ordered map?
-        priority_queue<pairing, vector<pairing>, pairing> pri_queue;
+        queue pri_queue;
         pairing cur_pairing;
 
         pairing_choice choice = eval_pairing_choices(0, 0, 0, 0);
@@ -335,40 +354,15 @@ public:
                 if (has_candidate)
                     cur_pairing = choice.non_gap;
 
-                // TODO: make helper function
                 if (is_candidate(best_fit_scores, choice.gap_s2, best_score))
                 {
-                    if (!has_candidate)
-                    {
-                        cur_pairing = choice.gap_s2;
-                    }
-                    else if (cur_pairing.ft.max < choice.gap_s2.ft.max)
-                    {
-                        pri_queue.push(cur_pairing);
-                        cur_pairing = choice.gap_s2;
-                    } else if (!(  choice.gap_s2.ft.max < cur_pairing.ft.min
-                                || choice.gap_s2.ft.max < best_min))
-                    {
-                        pri_queue.push(choice.gap_s2);
-                    }
+                    process_candidates(has_candidate, cur_pairing, choice.gap_s2, pri_queue, best_min);
                     has_candidate = true;
                 }
 
                 if (is_candidate(best_fit_scores, choice.gap_s1, best_score))
                 {
-                    if (!has_candidate)
-                    {
-                        cur_pairing = choice.gap_s1;
-                    }
-                    else if (cur_pairing.ft.max < choice.gap_s1.ft.max)
-                    {
-                        pri_queue.push(cur_pairing);
-                        cur_pairing = choice.gap_s1;
-                    } else if (!(  choice.gap_s1.ft.max < cur_pairing.ft.min
-                                || choice.gap_s1.ft.max < best_min))
-                    {
-                        pri_queue.push(choice.gap_s1);
-                    }
+                    process_candidates(has_candidate, cur_pairing, choice.gap_s1, pri_queue, best_min);
                     has_candidate = true;
                 }
             }
