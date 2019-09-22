@@ -2,6 +2,7 @@
 
 #include "person.hpp"
 #include "sequence_aligner.hpp"
+#include "thread_pool.hpp"
 
 #include <future>
 
@@ -26,9 +27,11 @@ public:
 template <HelixStream T>
 class pairwise_aligner {
     AlignmentForker<T>& forker_;
+    thread_pool& pool_;
 
 public:
-    explicit pairwise_aligner(AlignmentForker<T>& forker) : forker_(forker) {};
+    explicit pairwise_aligner(thread_pool& pool, AlignmentForker<T>& forker)
+        : forker_(forker), pool_(pool) {};
 
     // TODO: Use future build in error?
     // TODO: use constraints to enforce person chromo count and that both people have same count.
@@ -38,8 +41,8 @@ public:
         futures.reserve(p1.chromosomes());
 
         for (std::size_t i = 0; i < p1.chromosomes(); ++i) {
-            auto my_future = forker_.spawn_alignment(p1.chromosome(i), p2.chromosome(i));
-            futures.push_back(std::move(my_future));
+            //auto my_future = forker_.spawn_alignment(p1.chromosome(i), p2.chromosome(i));
+            //futures.push_back(std::move(my_future));
         }
 
         auto wait_for_all = [my_futures = std::move(futures)] {
@@ -54,7 +57,7 @@ public:
             return results;
         };
 
-        return std::async(std::launch::async, wait_for_all);
+        return pool_.enqueue(wait_for_all);
     }
 };
 

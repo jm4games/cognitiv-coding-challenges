@@ -11,6 +11,7 @@ namespace dna
 {
 
 const size_t fogsaa::BASE_S_OFFSET = 1;
+const std::byte telemere_seq[]{byte{0x3}, byte{0x3}, byte{0x0}, byte{0x2}, byte{0x2}, byte{0x2}};
 
 static const int64_t MatchScore = 1;
 static const int64_t MisMatchScore = -1;

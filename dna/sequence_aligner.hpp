@@ -34,9 +34,9 @@ struct alignment_result
 };
 
 template<HelixStream T>
-class SequenceAligner {
+class sequence_aligner {
 public:
-    virtual alignment_result align_with(T& a, T& b) = 0;
+    virtual alignment_result align(T& a, T& b)  = 0;
 };
 
 } // dna

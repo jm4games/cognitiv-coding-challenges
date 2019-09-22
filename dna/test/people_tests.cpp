@@ -1,5 +1,6 @@
 #include "catch.hpp"
 #include "fake_person_factory.hpp"
+#include "fogsaa.hpp"
 #include <person.hpp>
 #include <person_analyzer.hpp>
 
@@ -8,16 +9,19 @@ using namespace std;
 
 template<HelixStream T>
 class threaded_alignment_forker : public AlignmentForker<T> {
-    SequenceAligner<T>& aligner_;
+    sequence_aligner<T>& aligner_;
+    thread_pool& pool_;
 
 public:
-    explicit threaded_alignment_forker(SequenceAligner<T>& aligner) : aligner_(aligner) {}
+    explicit threaded_alignment_forker(thread_pool& pool, sequence_aligner<T>& aligner)
+        : pool_(pool), aligner_(aligner) {}
 
     future<alignment_result> spawn_alignment(T& a, T& b) override {
-        promise<alignment_result> my_promise;
-        // TODO: SPAWN ALIGMENT
-
-        return my_promise.get_future();
+        return pool_.enqueue(
+                [](sequence_aligner<T>& aligner, T& c, T& d) { return aligner.align(c, d); },
+                aligner_,
+                a,
+                b);
     }
 };
 
@@ -28,10 +32,12 @@ SCENARIO("Testing dna between people") {
             fake_person bob = std::move(fake_person_factory::new_person_with_dup_chromos());
             fake_person alice = std::move(fake_person_factory::new_person_with_dup_chromos());
 
-            // TODO: construct fogsaa instance
-            //threaded_alignment_forker<fake_stream> forker;
-            //pairwise_aligner<fake_stream> aligner(forker);
-            //auto res = my_analyzer.analyze_people_async(bob, alice);
+            thread_pool pool(std::thread::hardware_concurrency());
+
+            fogsaa<fake_stream> fogsaa;
+            threaded_alignment_forker<fake_stream> forker(pool, fogsaa);
+            pairwise_aligner<fake_stream> aligner(pool, forker);
+            auto res = aligner.analyze_people_async(bob, alice);
         }
     }
 }
