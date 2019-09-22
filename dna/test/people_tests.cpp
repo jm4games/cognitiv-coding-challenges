@@ -12,16 +12,37 @@ class threaded_alignment_forker : public AlignmentForker<T> {
     sequence_aligner<T>& aligner_;
     thread_pool& pool_;
 
+    class align_closure
+    {
+        sequence_aligner<T>& aligner_;
+        T& a_;
+        T& b_;
+
+    public:
+        align_closure(sequence_aligner<T>& aligner, T& a, T& b)
+            : aligner_(aligner), a_(a), b_(b)
+        {}
+
+        alignment_result do_align()
+        {
+            return aligner_.align(a_, b_);
+        }
+    };
+
+    static alignment_result align_main(align_closure* closure)
+    {
+        alignment_result res = closure->do_align();
+        delete closure;
+        return res;
+    }
+
 public:
     explicit threaded_alignment_forker(thread_pool& pool, sequence_aligner<T>& aligner)
         : pool_(pool), aligner_(aligner) {}
 
-    future<alignment_result> spawn_alignment(T& a, T& b) override {
-        return pool_.enqueue(
-                [](sequence_aligner<T>& aligner, T& c, T& d) { return aligner.align(c, d); },
-                aligner_,
-                a,
-                b);
+    future<alignment_result> spawn_alignment(T&& a, T&& b) override {
+        auto closure = new align_closure(aligner_, a, b);
+        return pool_.enqueue(align_main, closure);
     }
 };
 
@@ -34,7 +55,7 @@ SCENARIO("Testing dna between people") {
 
             thread_pool pool(std::thread::hardware_concurrency());
 
-            fogsaa<fake_stream> fogsaa;
+            fogsaa_aligner<fake_stream> fogsaa;
             threaded_alignment_forker<fake_stream> forker(pool, fogsaa);
             pairwise_aligner<fake_stream> aligner(pool, forker);
             auto res = aligner.analyze_people_async(bob, alice);

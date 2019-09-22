@@ -6,15 +6,16 @@
 namespace dna
 {
 
+static const size_t BASE_S_OFFSET = 1;
+
 // FOGSAA based on the following whitepaper https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3638164/#s1
 
-template<HelixStream T>
-class fogsaa : public sequence_aligner<T> {
+class fogsaa {
 
     static const std::byte telemere_seq[];
 
-    static constexpr void trim_telemere_front(T& helix, std::vector<std::byte> &vec)
-    {
+    //static constexpr void trim_telemere_front(T& helix, std::vector<std::byte> &vec)
+    //{
         //int64_t telemere_start = 0; // REM: we have offset of atleast 1 before data, so we can use 0
         //std::byte buffer[sizeof(telemere_seq) * 2];
         //size_t i = 0; 
@@ -30,8 +31,9 @@ class fogsaa : public sequence_aligner<T> {
             //{
                 //buffer[i] = static_cast<std::byte>(*it));
             //}
-    }
+    //}
 
+    template<HelixStream T>
     static constexpr void fill_helix_vector(T& helix, std::vector<std::byte> &vec)
     {
         vec.reserve(helix.size() + BASE_S_OFFSET);
@@ -52,14 +54,12 @@ class fogsaa : public sequence_aligner<T> {
         }
     }
 
-    alignment_result align_bytes(
-            const std::vector<std::byte>& s1, const std::vector<std::byte>& s2) const;
+    static alignment_result align_bytes(
+            const std::vector<std::byte>& s1, const std::vector<std::byte>& s2);
 public:
-    static const size_t BASE_S_OFFSET;
 
-    fogsaa() {};
-
-    alignment_result align(T& stream1, T& stream2) override
+    template<HelixStream T>
+    static alignment_result align(T& stream1, T& stream2)
     {
         if (stream1.size() == 0 && stream2.size() == 0)
         {
@@ -83,6 +83,17 @@ public:
         fill_helix_vector(stream2, s2);
 
         return align_bytes(s1, s2);
+    }
+};
+
+template<HelixStream T>
+class fogsaa_aligner : public sequence_aligner<T>
+{
+public:
+    fogsaa_aligner() {};
+
+    alignment_result align(T& a, T&b) const override {
+        return fogsaa::align(a, b);
     }
 };
 

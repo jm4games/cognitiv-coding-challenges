@@ -36,7 +36,7 @@ struct alignment_result
 template<HelixStream T>
 class sequence_aligner {
 public:
-    virtual alignment_result align(T& a, T& b)  = 0;
+    virtual alignment_result align(T& a, T& b) const = 0;
 };
 
 } // dna

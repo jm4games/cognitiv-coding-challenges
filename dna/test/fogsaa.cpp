@@ -10,7 +10,6 @@ using namespace std;
 namespace dna
 {
 
-const size_t fogsaa::BASE_S_OFFSET = 1;
 const std::byte telemere_seq[]{byte{0x3}, byte{0x3}, byte{0x0}, byte{0x2}, byte{0x2}, byte{0x2}};
 
 static const int64_t MatchScore = 1;
@@ -136,7 +135,7 @@ class byte_aligner
 
     pairing_choice eval_pairing_choices(const int64_t score, const  int64_t p1, const int64_t p2) const
     {
-        int64_t s1_sz = s1_.size() - fogsaa::BASE_S_OFFSET, s2_sz = s2_.size() - fogsaa::BASE_S_OFFSET;
+        int64_t s1_sz = s1_.size() - BASE_S_OFFSET, s2_sz = s2_.size() - BASE_S_OFFSET;
         pairing_choice result;
 
         // compare
@@ -172,7 +171,7 @@ class byte_aligner
 
     alignment_result get_alignment()
     {
-        const int64_t s_offset = static_cast<int64_t>(fogsaa::BASE_S_OFFSET);
+        const int64_t s_offset = static_cast<int64_t>(BASE_S_OFFSET);
         int64_t s1_offset = s_offset;
         int64_t s2_offset = s_offset;
         int64_t s1_mut_start = -1;
@@ -180,7 +179,7 @@ class byte_aligner
         double total_muts = 0;
         vector<mutation> muts;
 
-        for (int64_t i= fogsaa::BASE_S_OFFSET; i < s1_.size(); ++i)
+        for (int64_t i= BASE_S_OFFSET; i < s1_.size(); ++i)
         {
             auto p = best_pairings_[i];
 
@@ -221,7 +220,7 @@ class byte_aligner
         // TODO: Better way to score?
         return alignment_result{
             std::move(muts),
-            1 - (total_muts / (s1_.size() - fogsaa::BASE_S_OFFSET)),
+            1 - (total_muts / (s1_.size() - BASE_S_OFFSET)),
             ""
         };
     }
@@ -240,7 +239,7 @@ public:
     byte_aligner(const vector<byte>& s1, const vector<byte>& s2)
         : s1_(s1), s2_(s2), best_pairings_()
     {
-        size_t size = max(s1.size(), s2.size()) + fogsaa::BASE_S_OFFSET;
+        size_t size = max(s1.size(), s2.size()) + BASE_S_OFFSET;
         best_pairings_ = move(make_unique<final_pairing[]>(size));
         cur_pairings_ = move(make_unique<final_pairing[]>(size));
     }
@@ -323,7 +322,7 @@ public:
     }
 };
 
-alignment_result fogsaa::align_bytes(const vector<byte>& s1, const vector<byte>& s2) const
+alignment_result fogsaa::align_bytes(const vector<byte>& s1, const vector<byte>& s2)
 {
     byte_aligner aligner(s1, s2);
     return aligner.run_alignment();
