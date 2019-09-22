@@ -101,7 +101,7 @@ class fogsaa {
         for (size_t i = 0; i < BASE_S_OFFSET; ++i)
             vec.emplace_back(static_cast<std::byte>(0));
 
-        bool trim_start = true;
+        //bool trim_start = true;
 
         while (true)
         {
@@ -110,11 +110,11 @@ class fogsaa {
                 return;
 
             auto it = seq.begin();
-            if (trim_start)
-            {
-                it = trim_telemere_front(helix, seq);
-                trim_start = false;
-            }
+            //if (trim_start)
+            //{
+                //it = trim_telemere_front(helix, seq);
+                //trim_start = false;
+            //}
 
             auto end = seq.end();
             for (; it != end; ++it)
