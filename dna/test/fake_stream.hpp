@@ -30,7 +30,7 @@ class fake_stream
 	std::atomic<long> offset_;
 	std::vector<std::byte> data_;
 	std::size_t chunksize_;
-  std::size_t len_;
+    std::size_t len_;
 public:
 	using byte_view = std::basic_string_view<std::byte, detail::binary_traits>;
 

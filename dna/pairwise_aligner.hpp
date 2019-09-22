@@ -3,6 +3,7 @@
 #include "person.hpp"
 #include "sequence_aligner.hpp"
 #include "thread_pool.hpp"
+
 #include <future>
 
 namespace dna {
@@ -14,7 +15,6 @@ concept bool ChromesomeSimliar = requires(T a, T b) {
 
 template<typename T>
 concept bool IsPerson = requires(T a) {
-    // TODO: Fix ME
     a.chromosomes() == 23;
 };
 
@@ -65,23 +65,6 @@ public:
         {
             T h1 = std::move(p1.chromosome(i));
             T h2 = std::move(p2.chromosome(i));
-
-            if (i == 22)
-            {
-                // Detect X/Y chromosome mismatch. A Y chromosome has ~57 million bp and an X
-                // chromosome has ~156 million bp. If one chromesome is less then 60% the size
-                // of other we can safely say we have a identified an X/Y (or a really corrupt strand).
-                if (static_cast<double>(std::min(h1.size(), h2.size())) / std::max(h1.size(), h2.size()) < .6)
-                {
-                    std::promise<alignment_result> p;
-                    alignment_result result;
-                    result.error = "Cannot match an X with a Y chromosome";
-                    p.set_value(result);
-                    futures.push_back(std::move(p.get_future()));
-                    break;
-                }
-            }
-
             std::future<alignment_result> my_future = forker_.spawn_alignment(
                     std::move(h1), std::move(h2));
             futures.push_back(std::move(my_future));

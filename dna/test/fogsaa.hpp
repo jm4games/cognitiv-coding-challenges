@@ -2,6 +2,7 @@
 
 #include "person.hpp"
 #include "sequence_aligner.hpp"
+#include <string.h>
 
 namespace dna
 {
@@ -12,42 +13,111 @@ static const size_t BASE_S_OFFSET = 1;
 
 class fogsaa {
 
-    static const std::byte telemere_seq[];
-
-    //static constexpr void trim_telemere_front(T& helix, std::vector<std::byte> &vec)
-    //{
-        //int64_t telemere_start = 0; // REM: we have offset of atleast 1 before data, so we can use 0
-        //std::byte buffer[sizeof(telemere_seq) * 2];
-        //size_t i = 0; 
-        //sequence_buffer<T> buf;
-
-        //while (true)
-        //{
-            //buf = helix.read();
-            //if (buf.size() == 0)
-                //break;
-
-            //for (;i < sizeof(buffer); ++i)
-            //{
-                //buffer[i] = static_cast<std::byte>(*it));
-            //}
-    //}
+    static const std::byte telemere_seq[6];
 
     template<HelixStream T>
-    static constexpr void fill_helix_vector(T& helix, std::vector<std::byte> &vec)
+    static constexpr sequence_buffer_iterator<T>consume_it(sequence_buffer<T>& seq, int64_t count)
+    {
+        auto it = seq.begin;
+        for(;count > 0; --count)
+            ++it;
+
+        return it;
+    }
+
+    template<HelixStream T>
+    static constexpr sequence_buffer_iterator<T> trim_telemere_front(T& helix, sequence_buffer<T>& seq)
+    {
+        const size_t t_size = sizeof(telemere_seq);
+        int64_t chromo_start = 0;
+        size_t offset = 0;
+        bool find_start = true;
+
+        while (true)
+        {
+            seq = helix.read();
+            if (seq.size() == 0)
+                break;
+
+            std::byte* buffer = (&(seq.buffer()[0])) + offset;
+
+            if (find_start)
+            {
+                // We could support trimming buffers smaller then the t_size, but that makes trimming
+                // more complicated. In practice we will never have a buffer smaller then t_size having
+                // telemeres so this should not be an issue.
+                if (seq.size() < t_size)
+                {
+                    return seq.begin();
+                }
+
+                for (size_t g=0; g < t_size; ++g)
+                {
+                    if (memcmp(buffer+g, telemere_seq, t_size) == 0)
+                    {
+                        if (g > 0)
+                            find_start = !(memcmp(buffer, telemere_seq + t_size - g, g) == 0);// check for partial match
+                        else
+                            find_start = false;
+
+                        offset = g + t_size;
+                        chromo_start = g + t_size;
+                        buffer = buffer + chromo_start;
+                        break;
+                    }
+                }
+
+                if (find_start)
+                {
+                    return seq.begin(); // no telemeres found at start of strand
+                }
+            }
+
+            size_t size = seq.size() - offset;
+            size_t limit = ((size / t_size) * t_size) + 1;
+            for (size_t i = 0; i < limit; i = i + t_size)
+            {
+                if (memcmp(buffer + i, telemere_seq, std::min(limit - i, t_size)) != 0)
+                    return consume_it(seq, chromo_start);
+                chromo_start += t_size;
+            }
+
+            offset = size - limit - 1; // TODO: do i need -1 here?
+        }
+
+        return consume_it(seq, chromo_start);
+    }
+
+    template<HelixStream T>
+    static void trim_telemere_end(std::vector<std::byte>& vec)
+    {
+
+    }
+
+    template<HelixStream T>
+    static constexpr void fill_helix_vector(T& helix, std::vector<std::byte>& vec)
     {
         vec.reserve(helix.size() + BASE_S_OFFSET);
         for (size_t i = 0; i < BASE_S_OFFSET; ++i)
             vec.emplace_back(static_cast<std::byte>(0));
 
+        bool trim_start = true;
+
         while (true)
         {
-            auto buf = helix.read();
-            if (buf.size() == 0)
+            auto seq = helix.read();
+            if (seq.size() == 0)
                 return;
 
-            auto end = buf.end();
-            for (auto it = buf.begin(); it != end; ++it)
+            auto it = seq.begin();
+            if (trim_start)
+            {
+                it = trim_telemere_front(helix, seq);
+                trim_start = false;
+            }
+
+            auto end = seq.end();
+            for (; it != end; ++it)
             {
                 vec.emplace_back(static_cast<std::byte>(*it));
             }
