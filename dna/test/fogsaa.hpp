@@ -148,7 +148,6 @@ public:
         std::vector<std::byte> s1;
         std::vector<std::byte> s2;
 
-        // TODO: set longest stream to s1, then flip back as needed
         fill_helix_vector(stream1, s1);
         fill_helix_vector(stream2, s2);
 
