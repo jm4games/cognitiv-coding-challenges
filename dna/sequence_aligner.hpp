@@ -12,6 +12,11 @@ struct location
 {
     int64_t offset = 0;
     int64_t length = 0;
+
+    bool operator==(const location& l) const
+    {
+        return offset == l.offset && length == l.length;
+    }
 };
 
 // Defines the location where two strands are conflicting.
@@ -21,6 +26,11 @@ struct mutation
     location helix2;
 
     mutation(location h1, location h2): helix1(h1), helix2(h2) {}
+
+    bool operator==(const mutation& m) const
+    {
+        return helix1 == m.helix1 && helix2 == m.helix2;
+    }
 };
 
 // Describes how similar two helixes are and where they differ (mutations).

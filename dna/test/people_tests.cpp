@@ -50,15 +50,15 @@ SCENARIO("Testing dna between people") {
     GIVEN("Two People")
     {
         WHEN("BLAH") {
-            fake_person bob = std::move(fake_person_factory::new_person_with_dup_chromos());
-            fake_person alice = std::move(fake_person_factory::new_person_with_dup_chromos());
+            //fake_person bob = std::move(fake_person_factory::new_person_with_dup_chromos());
+            //fake_person alice = std::move(fake_person_factory::new_person_with_dup_chromos());
 
-            thread_pool pool(std::thread::hardware_concurrency());
+            //thread_pool pool(std::thread::hardware_concurrency());
 
-            fogsaa_aligner<fake_stream> fogsaa;
-            threaded_alignment_forker<fake_stream> forker(pool, fogsaa);
-            pairwise_aligner<fake_stream> aligner(pool, forker);
-            auto res = aligner.analyze_people_async(bob, alice);
+            //fogsaa_aligner<fake_stream> fogsaa;
+            //threaded_alignment_forker<fake_stream> forker(pool, fogsaa);
+            //pairwise_aligner<fake_stream> aligner(pool, forker);
+            //auto res = aligner.analyze_people_async(bob, alice);
         }
     }
 }
