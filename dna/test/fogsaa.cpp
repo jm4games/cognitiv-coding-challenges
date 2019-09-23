@@ -226,11 +226,11 @@ class byte_aligner
         }
 
         // TODO: Better way to score?
-        return alignment_result{
+        alignment_result result(
             std::move(muts),
-            1 - (total_muts / (max(s1_.size(), s2_.size()) - BASE_S_OFFSET)),
-            ""
-        };
+            std::move(std::string("")),
+            1 - (total_muts / (max(s1_.size(), s2_.size()) - BASE_S_OFFSET)));
+        return result;
     }
 
     static bool is_candidate(const score_cache& cache, const pairing& pairing, int64_t best_score)
@@ -317,7 +317,7 @@ public:
                     break;
                 }
 
-                if (cur_pairing.s1_offset + 1 == s1_.size() || cur_pairing.s2_offset +1 == s2_.size())
+                if (cur_pairing.s1_offset + 1 == s1_.size() || cur_pairing.s2_offset + 1 == s2_.size())
                 {
                     best_score = cur_pairing.score;
                     best_min = max(cur_pairing.ft.min, best_min);

@@ -43,7 +43,7 @@ class pairwise_aligner {
             results.reserve(futures_.size());
 
             for (size_t i = 0; i < futures_.size(); ++i) {
-                results[i] = futures_[i].get();
+                results.push_back(std::move(futures_[i].get()));
             }
 
             return results;

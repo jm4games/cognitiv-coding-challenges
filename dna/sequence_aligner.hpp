@@ -39,8 +39,45 @@ struct mutation
 struct alignment_result
 {
     std::vector<mutation> mutations;
-    double simularity_score = 0;
     std::string error;
+    double similarity_score = 0;
+
+    alignment_result() {}
+
+    alignment_result(std::vector<mutation>&& muts, std::string&& err, double score)
+        : mutations(std::move(muts)), error(std::move(err)), similarity_score(score)
+    {}
+
+    alignment_result(const alignment_result& other)
+        : mutations(other.mutations),
+          similarity_score(other.similarity_score)
+    {
+        if (other.error != "")
+            error = std::move(other.error);
+    }
+
+    alignment_result(alignment_result&& other) noexcept
+        : mutations(std::move(other.mutations)),
+          error(std::move(other.error)),
+          similarity_score(other.similarity_score)
+    {}
+
+    alignment_result& operator=(const alignment_result& other)
+    {
+        mutations = other.mutations;
+        error = other.error;
+        similarity_score = other.similarity_score;
+        return *this;
+    }
+
+    alignment_result& operator=(alignment_result&& other)
+    {
+        mutations = std::move(other.mutations);
+        if (other.error != "")
+            error = std::move(other.error);
+        similarity_score = other.similarity_score;
+        return *this;
+    }
 };
 
 template<HelixStream T>

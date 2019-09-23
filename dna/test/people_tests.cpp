@@ -15,12 +15,12 @@ class threaded_alignment_forker : public AlignmentForker<T> {
     class align_closure
     {
         sequence_aligner<T>& aligner_;
-        T& a_;
-        T& b_;
+        T a_;
+        T b_;
 
     public:
-        align_closure(sequence_aligner<T>& aligner, T& a, T& b)
-            : aligner_(aligner), a_(a), b_(b)
+        align_closure(sequence_aligner<T>& aligner, T&& a, T&& b)
+            : aligner_(aligner), a_(std::move(a)), b_(std::move(b))
         {}
 
         alignment_result do_align()
@@ -41,24 +41,30 @@ public:
         : pool_(pool), aligner_(aligner) {}
 
     future<alignment_result> spawn_alignment(T&& a, T&& b) override {
-        auto closure = new align_closure(aligner_, a, b);
+        auto closure = new align_closure(aligner_, std::move(a), std::move(b));
         return pool_.enqueue(align_main, closure);
     }
 };
 
-SCENARIO("Testing dna between people") {
-    GIVEN("Two People")
+TEST_CASE("Given two male people with exact dna match, no mutations should be found") {
+    fake_person bob = std::move(fake_person_factory::new_person_with_dup_chromos());
+    fake_person john = std::move(fake_person_factory::new_person_with_dup_chromos());
+
+    thread_pool pool(std::thread::hardware_concurrency());
+    fogsaa_aligner<fake_stream> fogsaa;
+    threaded_alignment_forker<fake_stream> forker(pool, fogsaa);
+    pairwise_aligner<fake_stream> aligner(pool, forker);
+    auto results = aligner.analyze_people_async(bob, john).get();
+
+    REQUIRE(results.size() == 23);
+
+    size_t i = 0;
+    for (auto it = results.begin(); it != results.end(); ++it)
     {
-        WHEN("BLAH") {
-            //fake_person bob = std::move(fake_person_factory::new_person_with_dup_chromos());
-            //fake_person alice = std::move(fake_person_factory::new_person_with_dup_chromos());
-
-            //thread_pool pool(std::thread::hardware_concurrency());
-
-            //fogsaa_aligner<fake_stream> fogsaa;
-            //threaded_alignment_forker<fake_stream> forker(pool, fogsaa);
-            //pairwise_aligner<fake_stream> aligner(pool, forker);
-            //auto res = aligner.analyze_people_async(bob, alice);
-        }
+        UNSCOPED_INFO("Chromosome " << i);
+        alignment_result res = *it;
+        REQUIRE(res.mutations.size() == 0);
+        REQUIRE(res.similarity_score == 1);
+        ++i;
     }
 }

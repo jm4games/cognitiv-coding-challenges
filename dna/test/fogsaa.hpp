@@ -134,7 +134,7 @@ public:
         if (stream1.size() == 0 && stream2.size() == 0)
         {
             alignment_result res;
-            res.simularity_score = 1;
+            res.similarity_score = 1;
             return res;
         }
 
