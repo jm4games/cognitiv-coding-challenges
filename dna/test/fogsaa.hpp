@@ -25,6 +25,9 @@ class fogsaa {
         return it;
     }
 
+    // NOTE:!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    // telemere stripping not properly implemented. Currnetly its matching bytes with single bp
+    // against bytes with 4 bp, this needs to be fixed.
     template<HelixStream T>
     static constexpr sequence_buffer_iterator<T> trim_telemere_front(T& helix, sequence_buffer<T>& seq)
     {
@@ -91,7 +94,7 @@ class fogsaa {
     template<HelixStream T>
     static void trim_telemere_end(std::vector<std::byte>& vec)
     {
-
+        // TODO: implement
     }
 
     template<HelixStream T>
