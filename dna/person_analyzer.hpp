@@ -7,6 +7,8 @@
 
 namespace dna {
 
+const std::string ChromoMismatchMFErr = "Cannot match an X with a Y chromosome";
+
 template<typename T>
 concept bool ChromesomeSimliar = requires(T a, T b) {
     a.chromosomes() == b.chromosomes();
@@ -75,7 +77,7 @@ public:
                 {
                     std::promise<alignment_result> p;
                     alignment_result result;
-                    result.error = "Cannot match an X with a Y chromosome";
+                    result.error = std::string(ChromoMismatchMFErr);
                     p.set_value(result);
                     futures.push_back(std::move(p.get_future()));
                     break;

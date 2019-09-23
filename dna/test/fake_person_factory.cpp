@@ -66,3 +66,17 @@ fake_person fake_person_factory::new_person_with_dup_chromos()
 
     return person;
 }
+
+fake_person fake_person_factory::new_person_with_dup_chromos_male()
+{
+    auto ychrom = data::fake();
+    ychrom.resize(sizeof(rawdata)/2); // relying on pairwise_analyzer detection of chromo count match < .60.
+    fake_person person(std::array<std::vector<std::byte>, 23> {
+           data::fake(), data::fake(), data::fake(), data::fake(), data::fake(), data::fake(),
+           data::fake(), data::fake(), data::fake(), data::fake(), data::fake(), data::fake(),
+           data::fake(), data::fake(), data::fake(), data::fake(), data::fake(), data::fake(),
+           data::fake(), data::fake(), data::fake(), data::fake(), std::move(ychrom)
+	});
+
+    return person;
+}

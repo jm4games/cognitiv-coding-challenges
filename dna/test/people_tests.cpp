@@ -68,3 +68,34 @@ TEST_CASE("Given two male people with exact dna match, no mutations should be fo
         ++i;
     }
 }
+
+TEST_CASE("Given one male and one female, chromosome 23 should have error") {
+    fake_person bob = std::move(fake_person_factory::new_person_with_dup_chromos_male());
+    fake_person alice = std::move(fake_person_factory::new_person_with_dup_chromos());
+
+    thread_pool pool(std::thread::hardware_concurrency());
+    fogsaa_aligner<fake_stream> fogsaa;
+    threaded_alignment_forker<fake_stream> forker(pool, fogsaa);
+    pairwise_aligner<fake_stream> aligner(pool, forker);
+    auto results = aligner.analyze_people_async(bob, alice).get();
+
+    REQUIRE(results.size() == 23);
+
+    size_t i = 0;
+    for (auto it = results.begin(); it != results.end(); ++it)
+    {
+        alignment_result res = *it;
+        UNSCOPED_INFO("Chromosome " << i);
+
+        if (i != 22)
+        {
+            REQUIRE(res.mutations.size() == 0);
+            REQUIRE(res.similarity_score == 1);
+        } else
+        {
+            REQUIRE(res.error == dna::ChromoMismatchMFErr);
+        }
+
+        ++i;
+    }
+}
