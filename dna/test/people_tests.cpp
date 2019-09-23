@@ -2,7 +2,7 @@
 #include "fake_person_factory.hpp"
 #include "fogsaa.hpp"
 #include <person.hpp>
-#include <person_analyzer.hpp>
+#include <pairwise_aligner.hpp>
 
 using namespace dna;
 using namespace std;

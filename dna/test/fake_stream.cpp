@@ -66,7 +66,7 @@ fake_stream& fake_stream::operator=(const fake_stream& other)
 	chunksize_ = other.chunksize_;
 	data_ = other.data_;
 	offset_ = other.offset_.load();
-  len_ = other.len_;
+    len_ = other.len_;
 
 	return *this;
 }
@@ -76,13 +76,14 @@ fake_stream& fake_stream::operator=(fake_stream&& other) noexcept
 	chunksize_ = other.chunksize_;
 	data_ = std::move(other.data_);
 	offset_ = other.offset_.exchange(0);
-  len_ = other.len_;
+    len_ = other.len_;
 
 	return *this;
 }
 
 void fake_stream::seek(long offset)
 {
+    // FIXME: with length fixes offset will not work properly if offset is mid byte
 	offset_.store(std::min(std::max(offset, 0L), static_cast<long>(len_)));
 }
 

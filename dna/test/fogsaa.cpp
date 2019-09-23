@@ -274,7 +274,7 @@ public:
         int64_t best_score = numeric_limits<int64_t>::min();
         int64_t best_min = numeric_limits<int64_t>::min();
         unordered_map<pairing_key, int64_t, hash_pairing_key> best_fit_scores;
-        // TODO: replace queue vector with ordered map?
+        // TODO: replace queue vector with map or max heap
         queue pri_queue;
         pairing cur_pairing;
 
